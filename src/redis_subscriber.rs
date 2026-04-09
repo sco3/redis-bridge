@@ -42,8 +42,8 @@ impl RedisSubscriber {
         let config = RedisConfig::from_url(&self.config.redis_url)?;
         let client = RedisClient::new(config, None, None, None);
 
-        // Connect to Redis
-        client.connect();
+        // Connect to Redis — store the handle so the connection task isn't dropped
+        let _conn_handle = client.connect();
         client.wait_for_connect().await?;
 
         // Get the message stream before subscribing
@@ -58,7 +58,13 @@ impl RedisSubscriber {
             let channel = message.channel;
             info!("Received message on channel: {}", channel);
 
-            let payload: String = message.value.convert().unwrap_or_default();
+            let payload: String = match message.value.convert() {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!("Failed to convert message to string: {}", e);
+                    continue;
+                }
+            };
 
             let json_value: serde_json::Value = match serde_json::from_str(&payload) {
                 Ok(v) => v,

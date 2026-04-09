@@ -48,13 +48,16 @@ pub struct JwtConfig {
     pub audience: String,
     pub issuer: String,
     pub algorithm: String,
+    /// Token TTL in hours. Defaults to 1 hour.
+    pub token_ttl_hours: i64,
+    /// Whether the token grants admin privileges.
+    pub is_admin: bool,
 }
 
 impl Default for JwtConfig {
     fn default() -> Self {
         Self {
-            secret: std::env::var("JWT_SECRET_KEY")
-                .unwrap_or_else(|_| "my-test-key-but-now-longer-than-32-bytes".to_string()),
+            secret: jwt_secret_from_env(),
             username: std::env::var("JWT_USERNAME")
                 .unwrap_or_else(|_| "admin@example.com".to_string()),
             audience: std::env::var("JWT_AUDIENCE")
@@ -62,8 +65,18 @@ impl Default for JwtConfig {
             issuer: std::env::var("JWT_ISSUER")
                 .unwrap_or_else(|_| "mcpgateway".to_string()),
             algorithm: std::env::var("JWT_ALGORITHM").unwrap_or_else(|_| "HS256".to_string()),
+            token_ttl_hours: 1,
+            is_admin: true,
         }
     }
+}
+
+/// Read JWT secret from env, falling back to a known test key.
+/// In production, the caller MUST validate that JWT_SECRET_KEY is set
+/// (see `main.rs` validation).
+fn jwt_secret_from_env() -> String {
+    std::env::var("JWT_SECRET_KEY")
+        .unwrap_or_else(|_| "my-test-key-but-now-longer-than-32-bytes".to_string())
 }
 
 fn base64_encode_json<T: Serialize>(value: &T) -> Result<String, JwtError> {
@@ -78,7 +91,7 @@ fn base64_encode_json<T: Serialize>(value: &T) -> Result<String, JwtError> {
 /// Returns an error if HMAC initialization fails or serialization fails.
 pub fn generate_jwt_token(config: &JwtConfig) -> Result<String, JwtError> {
     let now = Utc::now();
-    let exp = now + chrono::Duration::hours(8760); // 1 year
+    let exp = now + chrono::Duration::hours(config.token_ttl_hours);
 
     let header = JwtHeader {
         alg: config.algorithm.clone(),
@@ -102,7 +115,7 @@ pub fn generate_jwt_token(config: &JwtConfig) -> Result<String, JwtError> {
         user: JwtUser {
             email: config.username.clone(),
             full_name: "Rust MCP Bridge".to_string(),
-            is_admin: true,
+            is_admin: config.is_admin,
             auth_provider: "local".to_string(),
         },
     };
@@ -154,6 +167,8 @@ mod tests {
             audience: "custom-audience".to_string(),
             issuer: "custom-issuer".to_string(),
             algorithm: "HS256".to_string(),
+            token_ttl_hours: 24,
+            is_admin: false,
         };
 
         let token = generate_jwt_token(&config).unwrap();
@@ -171,6 +186,7 @@ mod tests {
         assert_eq!(claims.iss, "custom-issuer");
         assert_eq!(claims.user.email, "custom-user@test.com");
         assert_eq!(claims.user.full_name, "Rust MCP Bridge");
+        assert!(!claims.user.is_admin);
     }
 
     #[test]
@@ -223,5 +239,7 @@ mod tests {
         assert_eq!(config.audience, "mcpgateway-api");
         assert_eq!(config.issuer, "mcpgateway");
         assert_eq!(config.algorithm, "HS256");
+        assert_eq!(config.token_ttl_hours, 1);
+        assert!(config.is_admin);
     }
 }

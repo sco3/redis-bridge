@@ -32,6 +32,7 @@ impl ApiClient {
     /// Returns an error if the HTTP client fails to initialize.
     pub fn new(config: Config) -> Result<Self, ApiError> {
         let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
             .build()
             .map_err(ApiError::Http)?;
 
@@ -53,6 +54,7 @@ impl ApiClient {
             audience: self.config.jwt_audience.clone(),
             issuer: self.config.jwt_issuer.clone(),
             algorithm: self.config.jwt_algorithm.clone(),
+            ..Default::default()
         };
 
         let token = jwt::generate_jwt_token(&jwt_config)?;

@@ -22,7 +22,6 @@ pub struct BearerAuth {
     pub token: String,
 }
 
-#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolCreate {
@@ -48,8 +47,7 @@ pub struct ToolCreate {
     )]
     pub input_schema: serde_json::Value,
     #[serde(skip_serializing_if = "Option::is_none", alias = "output_schema", rename = "outputSchema")]
-    #[allow(non_snake_case)]
-    pub outputSchema: Option<serde_json::Value>,
+    pub output_schema: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub annotations: HashMap<String, serde_json::Value>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -98,7 +96,7 @@ impl Default for ToolCreate {
             request_type: default_request_type(),
             headers: None,
             input_schema: default_input_schema(),
-            outputSchema: None,
+            output_schema: None,
             annotations: HashMap::new(),
             jsonpath_filter: String::new(),
             auth: None,
@@ -168,7 +166,7 @@ mod tests {
             description: Some("A test tool".to_string()),
             integration_type: "REST".to_string(),
             request_type: "POST".to_string(),
-            outputSchema: None,
+            output_schema: None,
             ..Default::default()
         };
 
@@ -210,7 +208,7 @@ mod tests {
             request_type: "GET".to_string(),
             headers: Some(headers),
             input_schema: serde_json::json!({"type": "object", "properties": {"query": {"type": "string"}}}),
-            outputSchema: Some(serde_json::json!({"type": "object"})),
+            output_schema: Some(serde_json::json!({"type": "object"})),
             annotations,
             jsonpath_filter: "$.data".to_string(),
             auth: None,
@@ -252,7 +250,7 @@ mod tests {
         assert_eq!(tool.integration_type, "REST");
         assert_eq!(tool.request_type, "SSE");
         assert_eq!(tool.input_schema, serde_json::json!({"type": "object", "properties": {}}));
-        assert!(tool.outputSchema.is_none());
+        assert!(tool.output_schema.is_none());
         assert!(tool.url.is_none());
         assert!(tool.headers.is_none());
         assert!(tool.auth.is_none());
