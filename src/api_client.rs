@@ -25,6 +25,11 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
+    /// Create a new API client.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP client fails to initialize.
     pub fn new(config: Config) -> Result<Self, ApiError> {
         let client = Client::builder()
             .build()
@@ -33,7 +38,7 @@ impl ApiClient {
         Ok(Self { client, config })
     }
 
-    async fn get_auth_token(&self) -> Result<String, ApiError> {
+    fn get_auth_token(&self) -> Result<String, ApiError> {
         if self.config.use_predefined_token {
             if let Some(token) = &self.config.bearer_token {
                 info!("Using pre-defined bearer token");
@@ -55,8 +60,13 @@ impl ApiClient {
         Ok(token)
     }
 
+    /// Create a tool via the MCP Gateway API.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP request fails or the API returns an error status.
     pub async fn create_tool(&self, tool: &ToolCreate) -> Result<serde_json::Value, ApiError> {
-        let token = self.get_auth_token().await?;
+        let token = self.get_auth_token()?;
         let url = self.config.tool_creation_url();
 
         info!("Sending tool creation request to: {}", url);
@@ -94,6 +104,12 @@ impl ApiClient {
         }
     }
 
+    /// Create a tool from a raw JSON value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the JSON cannot be deserialized into a `ToolCreate`
+    /// or if the tool creation request fails.
     pub async fn create_tool_from_json(
         &self,
         json_value: serde_json::Value,

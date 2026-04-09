@@ -28,16 +28,16 @@ All parameters can be set via CLI arguments or environment variables:
 | `--redis-channel` | `REDIS_CHANNEL` | `tool_notifications` | Redis channel to subscribe to |
 | `--gateway-url` | `GATEWAY_URL` | `http://localhost:4444` | MCP Gateway base URL |
 | `--tool-endpoint` | `TOOL_ENDPOINT` | `/tools` | Tool creation endpoint path |
-| `--jwt-secret` | `K6_JWT_SECRET_KEY` | `my-test-key-but-now-longer-than-32-bytes` | JWT signing secret |
-| `--jwt-username` | `K6_JWT_USERNAME` | `admin@example.com` | JWT subject/username |
-| `--jwt-audience` | `K6_JWT_AUDIENCE` | `mcpgateway-api` | JWT audience claim |
-| `--jwt-issuer` | `K6_JWT_ISSUER` | `mcpgateway` | JWT issuer claim |
-| `--jwt-algorithm` | `K6_JWT_ALGORITHM` | `HS256` | JWT signing algorithm |
+| `--jwt-secret` | `JWT_SECRET_KEY` | `my-test-key-but-now-longer-than-32-bytes` | JWT signing secret |
+| `--jwt-username` | `JWT_USERNAME` | `admin@example.com` | JWT subject/username |
+| `--jwt-audience` | `JWT_AUDIENCE` | `mcpgateway-api` | JWT audience claim |
+| `--jwt-issuer` | `JWT_ISSUER` | `mcpgateway` | JWT issuer claim |
+| `--jwt-algorithm` | `JWT_ALGORITHM` | `HS256` | JWT signing algorithm |
 | `--tool-visibility` | `TOOL_VISIBILITY` | `public` | Default tool visibility |
 | `--tool-integration-type` | `TOOL_INTEGRATION_TYPE` | `REST` | Default integration type |
 | `--tool-request-type` | `TOOL_REQUEST_TYPE` | `POST` | Default request type |
 | `--use-predefined-token` | `USE_PREDEFINED_TOKEN` | `false` | Use pre-defined bearer token |
-| `--bearer-token` | `K6_BEARER_TOKEN` | *(not set)* | Pre-defined bearer token |
+| `--bearer-token` | `BEARER_TOKEN` | *(not set)* | Pre-defined bearer token |
 
 ## Usage
 

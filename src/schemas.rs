@@ -22,6 +22,7 @@ pub struct BearerAuth {
     pub token: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolCreate {
@@ -136,12 +137,20 @@ fn default_expose_passthrough() -> bool {
 }
 
 impl ToolCreate {
-    /// Create a ToolCreate from a JSON value
+    /// Create a [`ToolCreate`] from a JSON value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the JSON value cannot be deserialized.
     pub fn from_value(value: serde_json::Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)
     }
 
-    /// Convert to JSON value for sending
+    /// Convert this [`ToolCreate`] to a JSON value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the struct cannot be serialized.
     pub fn to_value(&self) -> Result<serde_json::Value, serde_json::Error> {
         serde_json::to_value(self)
     }

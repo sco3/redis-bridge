@@ -25,7 +25,7 @@ pub struct Config {
     /// JWT secret key for token generation
     #[arg(
         long,
-        env = "K6_JWT_SECRET_KEY",
+        env = "JWT_SECRET_KEY",
         default_value = "my-test-key-but-now-longer-than-32-bytes"
     )]
     pub jwt_secret: String,
@@ -33,7 +33,7 @@ pub struct Config {
     /// JWT username/subject for token generation
     #[arg(
         long,
-        env = "K6_JWT_USERNAME",
+        env = "JWT_USERNAME",
         default_value = "admin@example.com"
     )]
     pub jwt_username: String,
@@ -41,7 +41,7 @@ pub struct Config {
     /// JWT audience claim
     #[arg(
         long,
-        env = "K6_JWT_AUDIENCE",
+        env = "JWT_AUDIENCE",
         default_value = "mcpgateway-api"
     )]
     pub jwt_audience: String,
@@ -49,7 +49,7 @@ pub struct Config {
     /// JWT issuer claim
     #[arg(
         long,
-        env = "K6_JWT_ISSUER",
+        env = "JWT_ISSUER",
         default_value = "mcpgateway"
     )]
     pub jwt_issuer: String,
@@ -57,7 +57,7 @@ pub struct Config {
     /// JWT signing algorithm
     #[arg(
         long,
-        env = "K6_JWT_ALGORITHM",
+        env = "JWT_ALGORITHM",
         default_value = "HS256"
     )]
     pub jwt_algorithm: String,
@@ -83,15 +83,17 @@ pub struct Config {
     pub use_predefined_token: bool,
 
     /// Pre-defined bearer token (if not using JWT generation)
-    #[arg(long, env = "K6_BEARER_TOKEN")]
+    #[arg(long, env = "BEARER_TOKEN")]
     pub bearer_token: Option<String>,
 }
 
 impl Config {
+    #[must_use]
     pub fn gateway_base_url(&self) -> String {
         self.gateway_url.trim_end_matches('/').to_string()
     }
 
+    #[must_use]
     pub fn tool_creation_url(&self) -> String {
         format!(
             "{}{}",

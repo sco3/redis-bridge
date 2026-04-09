@@ -19,10 +19,16 @@ pub struct RedisSubscriber {
 }
 
 impl RedisSubscriber {
+    #[must_use]
     pub fn new(config: Config) -> Self {
         Self { config }
     }
 
+    /// Run the Redis subscription loop, invoking the handler for each message.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Redis connection fails or the subscription cannot be established.
     pub async fn run<F, T>(
         &self,
         mut handler: F,
@@ -37,7 +43,7 @@ impl RedisSubscriber {
 
         info!("Subscribing to channel: {}", self.config.redis_channel);
 
-        // Get async connection and convert to pubsub
+        #[allow(deprecated)]
         let conn = client
             .get_async_connection()
             .await

@@ -53,15 +53,15 @@ pub struct JwtConfig {
 impl Default for JwtConfig {
     fn default() -> Self {
         Self {
-            secret: std::env::var("K6_JWT_SECRET_KEY")
+            secret: std::env::var("JWT_SECRET_KEY")
                 .unwrap_or_else(|_| "my-test-key-but-now-longer-than-32-bytes".to_string()),
-            username: std::env::var("K6_JWT_USERNAME")
+            username: std::env::var("JWT_USERNAME")
                 .unwrap_or_else(|_| "admin@example.com".to_string()),
-            audience: std::env::var("K6_JWT_AUDIENCE")
+            audience: std::env::var("JWT_AUDIENCE")
                 .unwrap_or_else(|_| "mcpgateway-api".to_string()),
-            issuer: std::env::var("K6_JWT_ISSUER")
+            issuer: std::env::var("JWT_ISSUER")
                 .unwrap_or_else(|_| "mcpgateway".to_string()),
-            algorithm: std::env::var("K6_JWT_ALGORITHM").unwrap_or_else(|_| "HS256".to_string()),
+            algorithm: std::env::var("JWT_ALGORITHM").unwrap_or_else(|_| "HS256".to_string()),
         }
     }
 }
@@ -71,6 +71,11 @@ fn base64_encode_json<T: Serialize>(value: &T) -> Result<String, JwtError> {
     Ok(URL_SAFE_NO_PAD.encode(json.as_bytes()))
 }
 
+/// Generate a JWT token using the provided configuration.
+///
+/// # Errors
+///
+/// Returns an error if HMAC initialization fails or serialization fails.
 pub fn generate_jwt_token(config: &JwtConfig) -> Result<String, JwtError> {
     let now = Utc::now();
     let exp = now + chrono::Duration::hours(8760); // 1 year
