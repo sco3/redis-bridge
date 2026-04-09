@@ -17,29 +17,29 @@ pub enum JwtError {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct JwtHeader {
-    alg: String,
-    typ: String,
+pub struct JwtHeader {
+    pub alg: String,
+    pub typ: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct JwtClaims {
-    sub: String,
-    exp: i64,
-    iat: i64,
-    aud: String,
-    iss: String,
-    jti: String,
-    token_use: String,
-    user: JwtUser,
+pub struct JwtClaims {
+    pub sub: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub aud: String,
+    pub iss: String,
+    pub jti: String,
+    pub token_use: String,
+    pub user: JwtUser,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct JwtUser {
-    email: String,
-    full_name: String,
-    is_admin: bool,
-    auth_provider: String,
+pub struct JwtUser {
+    pub email: String,
+    pub full_name: String,
+    pub is_admin: bool,
+    pub auth_provider: String,
 }
 
 pub struct JwtConfig {
@@ -132,114 +132,4 @@ pub fn generate_jwt_token(config: &JwtConfig) -> Result<String, JwtError> {
     let signature_b64 = URL_SAFE_NO_PAD.encode(result.into_bytes());
 
     Ok(format!("{message}.{signature_b64}"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_jwt_generation() {
-        let config = JwtConfig::default();
-        let token = generate_jwt_token(&config).unwrap();
-
-        let parts: Vec<&str> = token.split('.').collect();
-        assert_eq!(parts.len(), 3);
-
-        // Decode and verify the header
-        let header_bytes = URL_SAFE_NO_PAD.decode(parts[0]).unwrap();
-        let header: JwtHeader = serde_json::from_slice(&header_bytes).unwrap();
-        assert_eq!(header.typ, "JWT");
-
-        // Decode and verify the claims
-        let claims_bytes = URL_SAFE_NO_PAD.decode(parts[1]).unwrap();
-        let claims: JwtClaims = serde_json::from_slice(&claims_bytes).unwrap();
-        assert_eq!(claims.sub, config.username);
-        assert_eq!(claims.token_use, "session");
-        assert!(claims.user.is_admin);
-    }
-
-    #[test]
-    fn test_jwt_custom_config() {
-        let config = JwtConfig {
-            secret: "my-custom-secret-key-that-is-long-enough".to_string(),
-            username: "custom-user@test.com".to_string(),
-            audience: "custom-audience".to_string(),
-            issuer: "custom-issuer".to_string(),
-            algorithm: "HS256".to_string(),
-            token_ttl_hours: 24,
-            is_admin: false,
-        };
-
-        let token = generate_jwt_token(&config).unwrap();
-        let parts: Vec<&str> = token.split('.').collect();
-        assert_eq!(parts.len(), 3);
-
-        let header_bytes = URL_SAFE_NO_PAD.decode(parts[0]).unwrap();
-        let header: JwtHeader = serde_json::from_slice(&header_bytes).unwrap();
-        assert_eq!(header.alg, "HS256");
-
-        let claims_bytes = URL_SAFE_NO_PAD.decode(parts[1]).unwrap();
-        let claims: JwtClaims = serde_json::from_slice(&claims_bytes).unwrap();
-        assert_eq!(claims.sub, "custom-user@test.com");
-        assert_eq!(claims.aud, "custom-audience");
-        assert_eq!(claims.iss, "custom-issuer");
-        assert_eq!(claims.user.email, "custom-user@test.com");
-        assert_eq!(claims.user.full_name, "Rust MCP Bridge");
-        assert!(!claims.user.is_admin);
-    }
-
-    #[test]
-    fn test_jwt_unique_jti() {
-        let config = JwtConfig::default();
-        let token1 = generate_jwt_token(&config).unwrap();
-        let token2 = generate_jwt_token(&config).unwrap();
-
-        // JTI should be different
-        let parts1: Vec<&str> = token1.split('.').collect();
-        let parts2: Vec<&str> = token2.split('.').collect();
-        assert_ne!(parts1[2], parts2[2]);
-    }
-
-    #[test]
-    fn test_jwt_different_secrets_produce_different_tokens() {
-        let config1 = JwtConfig {
-            secret: "secret-one-that-is-long-enough-for-hmac".to_string(),
-            ..JwtConfig::default()
-        };
-        let config2 = JwtConfig {
-            secret: "secret-two-that-is-long-enough-for-hmac".to_string(),
-            ..JwtConfig::default()
-        };
-
-        let token1 = generate_jwt_token(&config1).unwrap();
-        let token2 = generate_jwt_token(&config2).unwrap();
-
-        // Signatures should differ
-        let parts1: Vec<&str> = token1.split('.').collect();
-        let parts2: Vec<&str> = token2.split('.').collect();
-        assert_ne!(parts1[2], parts2[2]);
-    }
-
-    #[test]
-    fn test_jwt_error_display() {
-        let err = JwtError::HmacInitialization;
-        assert!(err.to_string().contains("HMAC initialization failed"));
-    }
-
-    #[test]
-    fn test_jwt_config_default_uses_env_or_fallbacks() {
-        let config = JwtConfig::default();
-        // These should fallback to defaults since env vars aren't set in test
-        assert_eq!(
-            config.secret,
-            "my-test-key-but-now-longer-than-32-bytes"
-        );
-        assert_eq!(config.username, "admin@example.com");
-        assert_eq!(config.audience, "mcpgateway-api");
-        assert_eq!(config.issuer, "mcpgateway");
-        assert_eq!(config.algorithm, "HS256");
-        assert_eq!(config.token_ttl_hours, 1);
-        assert!(config.is_admin);
-    }
 }

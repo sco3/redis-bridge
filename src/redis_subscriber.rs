@@ -24,6 +24,18 @@ impl RedisSubscriber {
         Self { config }
     }
 
+    /// Returns the Redis URL this subscriber is configured with.
+    #[must_use]
+    pub fn redis_url(&self) -> &str {
+        &self.config.redis_url
+    }
+
+    /// Returns the Redis channel this subscriber subscribes to.
+    #[must_use]
+    pub fn redis_channel(&self) -> &str {
+        &self.config.redis_channel
+    }
+
     /// Run the Redis subscription loop, invoking the handler for each message.
     ///
     /// # Errors
