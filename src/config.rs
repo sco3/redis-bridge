@@ -102,3 +102,97 @@ impl Config {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn test_default_config() {
+        let config = Config::try_parse_from(["redis-bridge"]).unwrap();
+        assert_eq!(config.redis_url, "redis://127.0.0.1:6379");
+        assert_eq!(config.redis_channel, "tool_notifications");
+        assert_eq!(config.gateway_url, "http://localhost:4444");
+        assert_eq!(config.tool_endpoint, "/tools");
+        assert_eq!(config.jwt_secret, "my-test-key-but-now-longer-than-32-bytes");
+        assert_eq!(config.jwt_username, "admin@example.com");
+        assert_eq!(config.jwt_audience, "mcpgateway-api");
+        assert_eq!(config.jwt_issuer, "mcpgateway");
+        assert_eq!(config.jwt_algorithm, "HS256");
+        assert_eq!(config.tool_visibility, "public");
+        assert_eq!(config.tool_integration_type, "REST");
+        assert_eq!(config.tool_request_type, "POST");
+        assert!(!config.use_predefined_token);
+        assert!(config.bearer_token.is_none());
+    }
+
+    #[test]
+    fn test_custom_config_via_cli() {
+        let config = Config::try_parse_from([
+            "redis-bridge",
+            "--redis-url", "redis://custom:6380",
+            "--gateway-url", "http://gateway:9000",
+            "--jwt-secret", "super-secret",
+            "--jwt-username", "user@example.com",
+            "--tool-visibility", "private",
+            "--tool-integration-type", "MCP",
+        ])
+        .unwrap();
+
+        assert_eq!(config.redis_url, "redis://custom:6380");
+        assert_eq!(config.gateway_url, "http://gateway:9000");
+        assert_eq!(config.jwt_secret, "super-secret");
+        assert_eq!(config.jwt_username, "user@example.com");
+        assert_eq!(config.tool_visibility, "private");
+        assert_eq!(config.tool_integration_type, "MCP");
+    }
+
+    #[test]
+    fn test_gateway_base_url_trims_slashes() {
+        let config = Config::try_parse_from([
+            "redis-bridge",
+            "--gateway-url", "http://localhost:4444/",
+        ])
+        .unwrap();
+        assert_eq!(config.gateway_base_url(), "http://localhost:4444");
+
+        let config = Config::try_parse_from([
+            "redis-bridge",
+            "--gateway-url", "http://localhost:4444///",
+        ])
+        .unwrap();
+        assert_eq!(config.gateway_base_url(), "http://localhost:4444");
+    }
+
+    #[test]
+    fn test_tool_creation_url() {
+        let config = Config::try_parse_from([
+            "redis-bridge",
+            "--gateway-url", "http://localhost:4444",
+            "--tool-endpoint", "/tools",
+        ])
+        .unwrap();
+        assert_eq!(config.tool_creation_url(), "http://localhost:4444/tools");
+
+        let config = Config::try_parse_from([
+            "redis-bridge",
+            "--gateway-url", "http://localhost:4444/",
+            "--tool-endpoint", "/api/v1/tools",
+        ])
+        .unwrap();
+        assert_eq!(config.tool_creation_url(), "http://localhost:4444/api/v1/tools");
+    }
+
+    #[test]
+    fn test_predefined_token_flag() {
+        let config = Config::try_parse_from([
+            "redis-bridge",
+            "--use-predefined-token",
+            "--bearer-token", "my-token",
+        ])
+        .unwrap();
+        assert!(config.use_predefined_token);
+        assert_eq!(config.bearer_token, Some("my-token".to_string()));
+    }
+}

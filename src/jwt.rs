@@ -145,4 +145,83 @@ mod tests {
         assert_eq!(claims.token_use, "session");
         assert!(claims.user.is_admin);
     }
+
+    #[test]
+    fn test_jwt_custom_config() {
+        let config = JwtConfig {
+            secret: "my-custom-secret-key-that-is-long-enough".to_string(),
+            username: "custom-user@test.com".to_string(),
+            audience: "custom-audience".to_string(),
+            issuer: "custom-issuer".to_string(),
+            algorithm: "HS256".to_string(),
+        };
+
+        let token = generate_jwt_token(&config).unwrap();
+        let parts: Vec<&str> = token.split('.').collect();
+        assert_eq!(parts.len(), 3);
+
+        let header_bytes = URL_SAFE_NO_PAD.decode(parts[0]).unwrap();
+        let header: JwtHeader = serde_json::from_slice(&header_bytes).unwrap();
+        assert_eq!(header.alg, "HS256");
+
+        let claims_bytes = URL_SAFE_NO_PAD.decode(parts[1]).unwrap();
+        let claims: JwtClaims = serde_json::from_slice(&claims_bytes).unwrap();
+        assert_eq!(claims.sub, "custom-user@test.com");
+        assert_eq!(claims.aud, "custom-audience");
+        assert_eq!(claims.iss, "custom-issuer");
+        assert_eq!(claims.user.email, "custom-user@test.com");
+        assert_eq!(claims.user.full_name, "Rust MCP Bridge");
+    }
+
+    #[test]
+    fn test_jwt_unique_jti() {
+        let config = JwtConfig::default();
+        let token1 = generate_jwt_token(&config).unwrap();
+        let token2 = generate_jwt_token(&config).unwrap();
+
+        // JTI should be different
+        let parts1: Vec<&str> = token1.split('.').collect();
+        let parts2: Vec<&str> = token2.split('.').collect();
+        assert_ne!(parts1[2], parts2[2]);
+    }
+
+    #[test]
+    fn test_jwt_different_secrets_produce_different_tokens() {
+        let config1 = JwtConfig {
+            secret: "secret-one-that-is-long-enough-for-hmac".to_string(),
+            ..JwtConfig::default()
+        };
+        let config2 = JwtConfig {
+            secret: "secret-two-that-is-long-enough-for-hmac".to_string(),
+            ..JwtConfig::default()
+        };
+
+        let token1 = generate_jwt_token(&config1).unwrap();
+        let token2 = generate_jwt_token(&config2).unwrap();
+
+        // Signatures should differ
+        let parts1: Vec<&str> = token1.split('.').collect();
+        let parts2: Vec<&str> = token2.split('.').collect();
+        assert_ne!(parts1[2], parts2[2]);
+    }
+
+    #[test]
+    fn test_jwt_error_display() {
+        let err = JwtError::HmacInitialization;
+        assert!(err.to_string().contains("HMAC initialization failed"));
+    }
+
+    #[test]
+    fn test_jwt_config_default_uses_env_or_fallbacks() {
+        let config = JwtConfig::default();
+        // These should fallback to defaults since env vars aren't set in test
+        assert_eq!(
+            config.secret,
+            "my-test-key-but-now-longer-than-32-bytes"
+        );
+        assert_eq!(config.username, "admin@example.com");
+        assert_eq!(config.audience, "mcpgateway-api");
+        assert_eq!(config.issuer, "mcpgateway");
+        assert_eq!(config.algorithm, "HS256");
+    }
 }

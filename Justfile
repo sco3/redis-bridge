@@ -21,9 +21,12 @@ clippy:
 test:
     cargo test --all-targets --all-features
 
+# Install LLVM coverage tool
+install-coverage:
+    cargo install cargo-llvm-cov
+
 # Run tests with LLVM coverage report
-# Requires: cargo-llvm-cov (cargo install cargo-llvm-cov)
-coverage:
+coverage: install-coverage
     cargo llvm-cov --all-targets --all-features --lcov --output-path lcov.info
     cargo llvm-cov report --html
 

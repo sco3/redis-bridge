@@ -122,3 +122,35 @@ impl ApiClient {
         self.create_tool(&tool).await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn test_api_error_display() {
+        let err = ApiError::ApiError {
+            status: 404,
+            message: "Not found".to_string(),
+        };
+        assert!(err.to_string().contains("404"));
+        assert!(err.to_string().contains("Not found"));
+
+        let err = ApiError::Serialization(serde_json::from_str::<()>("invalid").unwrap_err());
+        assert!(err.to_string().contains("Tool serialization failed"));
+    }
+
+    #[test]
+    fn test_api_error_jwt_display() {
+        let err = ApiError::Jwt(jwt::JwtError::HmacInitialization);
+        assert!(err.to_string().contains("JWT generation failed"));
+    }
+
+    #[test]
+    fn test_api_client_creation() {
+        let config = Config::try_parse_from(["redis-bridge"]).unwrap();
+        let client = ApiClient::new(config);
+        assert!(client.is_ok());
+    }
+}
