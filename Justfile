@@ -1,9 +1,9 @@
 # Justfile for redis-bridge project
 # https://just.systems
 
-# Default target
+# Default target: show available targets
 default:
-    just build
+    just --list
 
 # Build the project in release mode
 build:
