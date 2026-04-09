@@ -25,12 +25,12 @@ impl Mocks for ToolNotificationMock {
         if &*command.cmd == "PUBLISH" {
             let channel = match command.args.first() {
                 Some(RedisValue::String(s)) => s.to_string(),
-                Some(RedisValue::Bytes(b)) => String::from_utf8_lossy(&b).to_string(),
+                Some(RedisValue::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
                 _ => return Err(fred::error::RedisError::new(fred::error::RedisErrorKind::InvalidArgument, "Invalid channel")),
             };
             let message = match command.args.get(1) {
                 Some(RedisValue::String(s)) => s.to_string(),
-                Some(RedisValue::Bytes(b)) => String::from_utf8_lossy(&b).to_string(),
+                Some(RedisValue::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
                 _ => return Err(fred::error::RedisError::new(fred::error::RedisErrorKind::InvalidArgument, "Invalid message")),
             };
             self.publish_buffer.lock().unwrap().push((channel, message));
