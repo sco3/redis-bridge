@@ -5,12 +5,18 @@ use redis_bridge::config::Config;
 fn test_custom_config_via_cli() {
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--redis-url", "redis://custom:6380",
-        "--gateway-url", "http://gateway:9000",
-        "--jwt-secret", "super-secret",
-        "--jwt-username", "user@example.com",
-        "--tool-visibility", "private",
-        "--tool-integration-type", "MCP",
+        "--redis-url",
+        "redis://custom:6380",
+        "--gateway-url",
+        "http://gateway:9000",
+        "--jwt-secret",
+        "super-secret",
+        "--jwt-username",
+        "user@example.com",
+        "--tool-visibility",
+        "private",
+        "--tool-integration-type",
+        "MCP",
     ])
     .unwrap();
 

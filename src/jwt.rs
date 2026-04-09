@@ -1,4 +1,4 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::Utc;
 use hmac::{Hmac, Mac};
 use rand::Rng;
@@ -62,8 +62,7 @@ impl Default for JwtConfig {
                 .unwrap_or_else(|_| "admin@example.com".to_string()),
             audience: std::env::var("JWT_AUDIENCE")
                 .unwrap_or_else(|_| "mcpgateway-api".to_string()),
-            issuer: std::env::var("JWT_ISSUER")
-                .unwrap_or_else(|_| "mcpgateway".to_string()),
+            issuer: std::env::var("JWT_ISSUER").unwrap_or_else(|_| "mcpgateway".to_string()),
             algorithm: std::env::var("JWT_ALGORITHM").unwrap_or_else(|_| "HS256".to_string()),
             token_ttl_hours: 1,
             is_admin: true,

@@ -13,8 +13,14 @@ async fn test_mock_simple_map_multiple_keys() {
     client.connect();
     client.wait_for_connect().await.unwrap();
 
-    let _: () = client.set("user:1", "Alice", None, None, false).await.unwrap();
-    let _: () = client.set("user:2", "Bob", None, None, false).await.unwrap();
+    let _: () = client
+        .set("user:1", "Alice", None, None, false)
+        .await
+        .unwrap();
+    let _: () = client
+        .set("user:2", "Bob", None, None, false)
+        .await
+        .unwrap();
 
     let user1: String = client.get("user:1").await.unwrap();
     let user2: String = client.get("user:2").await.unwrap();

@@ -6,11 +6,21 @@ use clap::Parser;
 #[command(about = "Redis to REST API bridge for MCP Gateway tool creation", long_about = None)]
 pub struct Config {
     /// Redis URL to connect to
-    #[arg(short, long, env = "REDIS_URL", default_value = "redis://127.0.0.1:6379")]
+    #[arg(
+        short,
+        long,
+        env = "REDIS_URL",
+        default_value = "redis://127.0.0.1:6379"
+    )]
     pub redis_url: String,
 
     /// Redis channel to subscribe to for notifications
-    #[arg(short = 'c', long, env = "REDIS_CHANNEL", default_value = "tool_notifications")]
+    #[arg(
+        short = 'c',
+        long,
+        env = "REDIS_CHANNEL",
+        default_value = "tool_notifications"
+    )]
     pub redis_channel: String,
 
     /// Base URL of the MCP Gateway API
@@ -31,35 +41,19 @@ pub struct Config {
     pub jwt_secret: String,
 
     /// JWT username/subject for token generation
-    #[arg(
-        long,
-        env = "JWT_USERNAME",
-        default_value = "admin@example.com"
-    )]
+    #[arg(long, env = "JWT_USERNAME", default_value = "admin@example.com")]
     pub jwt_username: String,
 
     /// JWT audience claim
-    #[arg(
-        long,
-        env = "JWT_AUDIENCE",
-        default_value = "mcpgateway-api"
-    )]
+    #[arg(long, env = "JWT_AUDIENCE", default_value = "mcpgateway-api")]
     pub jwt_audience: String,
 
     /// JWT issuer claim
-    #[arg(
-        long,
-        env = "JWT_ISSUER",
-        default_value = "mcpgateway"
-    )]
+    #[arg(long, env = "JWT_ISSUER", default_value = "mcpgateway")]
     pub jwt_issuer: String,
 
     /// JWT signing algorithm
-    #[arg(
-        long,
-        env = "JWT_ALGORITHM",
-        default_value = "HS256"
-    )]
+    #[arg(long, env = "JWT_ALGORITHM", default_value = "HS256")]
     pub jwt_algorithm: String,
 
     /// Tool creation endpoint path
@@ -95,10 +89,6 @@ impl Config {
 
     #[must_use]
     pub fn tool_creation_url(&self) -> String {
-        format!(
-            "{}{}",
-            self.gateway_base_url(),
-            self.tool_endpoint
-        )
+        format!("{}{}", self.gateway_base_url(), self.tool_endpoint)
     }
 }

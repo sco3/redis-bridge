@@ -1,6 +1,6 @@
 // Integration tests for Redis mocking functionality using fred v9
+use fred::mocks::{Buffer, Echo, MockCommand, Mocks, SimpleMap};
 use fred::prelude::*;
-use fred::mocks::{Echo, SimpleMap, Buffer, Mocks, MockCommand};
 use std::sync::Arc;
 
 /// Test basic string operations with SimpleMap mock
@@ -16,7 +16,10 @@ async fn test_mock_string_operations() {
     client.wait_for_connect().await.unwrap();
 
     // Test SET
-    let _: () = client.set("test_key", "test_value", None, None, false).await.unwrap();
+    let _: () = client
+        .set("test_key", "test_value", None, None, false)
+        .await
+        .unwrap();
 
     // Test GET
     let value: String = client.get("test_key").await.unwrap();
@@ -76,7 +79,10 @@ async fn test_mock_pubsub_with_buffer() {
     client.connect();
     client.wait_for_connect().await.unwrap();
 
-    let _: String = client.publish("notifications", "Hello subscribers!").await.unwrap();
+    let _: String = client
+        .publish("notifications", "Hello subscribers!")
+        .await
+        .unwrap();
 
     let commands = buffer.take();
     assert_eq!(commands.len(), 1);
@@ -117,7 +123,10 @@ async fn test_mock_json_message() {
 struct ErrorMock;
 
 impl Mocks for ErrorMock {
-    fn process_command(&self, _command: MockCommand) -> Result<RedisValue, fred::error::RedisError> {
+    fn process_command(
+        &self,
+        _command: MockCommand,
+    ) -> Result<RedisValue, fred::error::RedisError> {
         Err(fred::error::RedisError::new(
             fred::error::RedisErrorKind::NotFound,
             "ERR no such key",
@@ -197,7 +206,10 @@ async fn test_mock_expiration() {
     client.connect();
     client.wait_for_connect().await.unwrap();
 
-    let _: () = client.set("session:abc", "active", None, None, false).await.unwrap();
+    let _: () = client
+        .set("session:abc", "active", None, None, false)
+        .await
+        .unwrap();
     let _: String = client.expire("session:abc", 3600).await.unwrap();
     let _: String = client.ttl("session:abc").await.unwrap();
 
@@ -222,7 +234,10 @@ async fn test_mock_multiple_clients() {
     client1.wait_for_connect().await.unwrap();
 
     // Set and get with first client
-    let _: () = client1.set("client1_key", "value1", None, None, false).await.unwrap();
+    let _: () = client1
+        .set("client1_key", "value1", None, None, false)
+        .await
+        .unwrap();
     let val1: String = client1.get("client1_key").await.unwrap();
     assert_eq!(val1, "value1");
 
@@ -237,7 +252,10 @@ async fn test_mock_multiple_clients() {
     client2.connect();
     client2.wait_for_connect().await.unwrap();
 
-    let _: () = client2.set("client2_key", "value2", None, None, false).await.unwrap();
+    let _: () = client2
+        .set("client2_key", "value2", None, None, false)
+        .await
+        .unwrap();
     let val2: String = client2.get("client2_key").await.unwrap();
     assert_eq!(val2, "value2");
 
@@ -285,7 +303,13 @@ async fn test_mock_tool_notification_scenario() {
     });
 
     let _: () = client
-        .set("tool:notification:1", tool_notification.to_string(), None, None, false)
+        .set(
+            "tool:notification:1",
+            tool_notification.to_string(),
+            None,
+            None,
+            false,
+        )
         .await
         .unwrap();
 
@@ -307,10 +331,7 @@ async fn test_echo_mock_returns_args() {
     client.connect();
     client.wait_for_connect().await.unwrap();
 
-    let result: Vec<RedisValue> = client
-        .set("foo", "bar", None, None, false)
-        .await
-        .unwrap();
+    let result: Vec<RedisValue> = client.set("foo", "bar", None, None, false).await.unwrap();
 
     assert_eq!(result.len(), 2);
     assert_eq!(result[0], RedisValue::String("foo".into()));
@@ -389,7 +410,13 @@ async fn test_simple_map_multiple_values() {
     // Set multiple keys
     for i in 0..10 {
         let _: () = client
-            .set(format!("key:{}", i), format!("value:{}", i), None, None, false)
+            .set(
+                format!("key:{}", i),
+                format!("value:{}", i),
+                None,
+                None,
+                false,
+            )
             .await
             .unwrap();
     }

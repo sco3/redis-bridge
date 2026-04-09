@@ -13,7 +13,10 @@ async fn test_mock_simple_map_del() {
     client.connect();
     client.wait_for_connect().await.unwrap();
 
-    let _: () = client.set("key1", "value1", None, None, false).await.unwrap();
+    let _: () = client
+        .set("key1", "value1", None, None, false)
+        .await
+        .unwrap();
     let count: i64 = client.del("key1").await.unwrap();
     assert_eq!(count, 1);
 

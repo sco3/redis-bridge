@@ -4,7 +4,7 @@ use redis_bridge::config::Config;
 use redis_bridge::redis_subscriber::RedisSubscriber;
 use tokio::signal;
 use tracing::{error, info, warn};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -17,9 +17,10 @@ async fn main() -> anyhow::Result<()> {
                 .with_file(true)
                 .with_line_number(true),
         )
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-            EnvFilter::new("redis_bridge=info")
-        }))
+        .with(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("redis_bridge=info")),
+        )
         .init();
 
     // Parse CLI config (supports both CLI args and env vars)

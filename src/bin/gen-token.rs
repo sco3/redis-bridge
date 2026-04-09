@@ -106,7 +106,10 @@ fn main() {
         println!("  Is Admin:    {}", jwt_config.is_admin);
         println!();
         println!("Use with:");
-        println!("  curl -H \"Authorization: Bearer {}\" http://localhost:8080/tools", token);
+        println!(
+            "  curl -H \"Authorization: Bearer {}\" http://localhost:8080/tools",
+            token
+        );
     }
 }
 
@@ -115,6 +118,10 @@ fn mask_secret(secret: &str) -> String {
         "****".to_string()
     } else {
         let visible = secret.len().min(6);
-        format!("{}{}", &secret[..visible], "*".repeat(secret.len() - visible))
+        format!(
+            "{}{}",
+            &secret[..visible],
+            "*".repeat(secret.len() - visible)
+        )
     }
 }

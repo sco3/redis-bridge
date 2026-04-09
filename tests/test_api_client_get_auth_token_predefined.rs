@@ -7,7 +7,8 @@ fn test_api_client_get_auth_token_predefined() {
     let config = Config::try_parse_from([
         "redis-bridge",
         "--use-predefined-token",
-        "--bearer-token", "my-predefined-token",
+        "--bearer-token",
+        "my-predefined-token",
     ])
     .unwrap();
     let client = ApiClient::new(config).unwrap();

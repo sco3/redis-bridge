@@ -1,5 +1,5 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use redis_bridge::jwt::{self, JwtConfig, JwtClaims, JwtHeader};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use redis_bridge::jwt::{self, JwtClaims, JwtConfig, JwtHeader};
 
 #[test]
 fn test_jwt_custom_config() {

@@ -1,9 +1,9 @@
 // Integration tests for API client with mockito
+use clap::Parser;
+use mockito::Server;
 use redis_bridge::api_client::ApiClient;
 use redis_bridge::config::Config;
 use redis_bridge::schemas::ToolCreate;
-use clap::Parser;
-use mockito::Server;
 use serde_json::json;
 
 /// Test successful tool creation via API
@@ -22,9 +22,12 @@ async fn test_create_tool_success() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        &server.url(),
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 
@@ -66,9 +69,12 @@ async fn test_create_tool_with_auth() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        &server.url(),
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 
@@ -117,9 +123,12 @@ async fn test_create_tool_server_error() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        &server.url(),
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 
@@ -158,9 +167,12 @@ async fn test_create_tool_validation_error() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        &server.url(),
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 
@@ -201,10 +213,14 @@ async fn test_create_tool_custom_endpoint() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
-        "--tool-endpoint", "/api/v1/tools",
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        &server.url(),
+        "--tool-endpoint",
+        "/api/v1/tools",
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 
@@ -241,9 +257,11 @@ async fn test_create_tool_with_bearer_token() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
+        "--gateway-url",
+        &server.url(),
         "--use-predefined-token",
-        "--bearer-token", "my-predefined-token",
+        "--bearer-token",
+        "my-predefined-token",
     ])
     .unwrap();
 
@@ -279,9 +297,12 @@ async fn test_create_tool_from_json() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        &server.url(),
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 
@@ -307,9 +328,12 @@ async fn test_create_tool_from_json() {
 async fn test_create_tool_from_json_invalid() {
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", "http://localhost:4444",
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        "http://localhost:4444",
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 
@@ -340,9 +364,12 @@ async fn test_create_tool_with_tags_and_visibility() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        &server.url(),
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 
@@ -353,7 +380,11 @@ async fn test_create_tool_with_tags_and_visibility() {
         description: Some("A tool with tags".to_string()),
         integration_type: "REST".to_string(),
         request_type: "POST".to_string(),
-        tags: vec!["production".to_string(), "api".to_string(), "v1".to_string()],
+        tags: vec![
+            "production".to_string(),
+            "api".to_string(),
+            "v1".to_string(),
+        ],
         visibility: Some("public".to_string()),
         ..Default::default()
     };
@@ -381,9 +412,12 @@ async fn test_create_tool_with_input_schema() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        &server.url(),
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 
@@ -450,9 +484,12 @@ async fn test_create_multiple_tools() {
 
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", &server.url(),
-        "--jwt-secret", "test-secret-key-that-is-long-enough",
-        "--jwt-username", "admin@example.com",
+        "--gateway-url",
+        &server.url(),
+        "--jwt-secret",
+        "test-secret-key-that-is-long-enough",
+        "--jwt-username",
+        "admin@example.com",
     ])
     .unwrap();
 

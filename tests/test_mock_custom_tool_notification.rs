@@ -26,19 +26,32 @@ impl Mocks for ToolNotificationMock {
             let channel = match command.args.first() {
                 Some(RedisValue::String(s)) => s.to_string(),
                 Some(RedisValue::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
-                _ => return Err(fred::error::RedisError::new(fred::error::RedisErrorKind::InvalidArgument, "Invalid channel")),
+                _ => {
+                    return Err(fred::error::RedisError::new(
+                        fred::error::RedisErrorKind::InvalidArgument,
+                        "Invalid channel",
+                    ));
+                }
             };
             let message = match command.args.get(1) {
                 Some(RedisValue::String(s)) => s.to_string(),
                 Some(RedisValue::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
-                _ => return Err(fred::error::RedisError::new(fred::error::RedisErrorKind::InvalidArgument, "Invalid message")),
+                _ => {
+                    return Err(fred::error::RedisError::new(
+                        fred::error::RedisErrorKind::InvalidArgument,
+                        "Invalid message",
+                    ));
+                }
             };
             self.publish_buffer.lock().unwrap().push((channel, message));
             Ok(RedisValue::Integer(1))
         } else if &*command.cmd == "SUBSCRIBE" {
             Ok(RedisValue::Queued)
         } else {
-            Err(fred::error::RedisError::new(fred::error::RedisErrorKind::Unknown, "Unimplemented."))
+            Err(fred::error::RedisError::new(
+                fred::error::RedisErrorKind::Unknown,
+                "Unimplemented.",
+            ))
         }
     }
 }

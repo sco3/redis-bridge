@@ -8,7 +8,10 @@ fn test_default_config() {
     assert_eq!(config.redis_channel, "tool_notifications");
     assert_eq!(config.gateway_url, "http://localhost:4444");
     assert_eq!(config.tool_endpoint, "/tools");
-    assert_eq!(config.jwt_secret, "my-test-key-but-now-longer-than-32-bytes");
+    assert_eq!(
+        config.jwt_secret,
+        "my-test-key-but-now-longer-than-32-bytes"
+    );
     assert_eq!(config.jwt_username, "admin@example.com");
     assert_eq!(config.jwt_audience, "mcpgateway-api");
     assert_eq!(config.jwt_issuer, "mcpgateway");

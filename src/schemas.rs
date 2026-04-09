@@ -46,7 +46,11 @@ pub struct ToolCreate {
         alias = "input_schema"
     )]
     pub input_schema: serde_json::Value,
-    #[serde(skip_serializing_if = "Option::is_none", alias = "output_schema", rename = "outputSchema")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "output_schema",
+        rename = "outputSchema"
+    )]
     pub output_schema: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub annotations: HashMap<String, serde_json::Value>,
@@ -153,4 +157,3 @@ impl ToolCreate {
         serde_json::to_value(self)
     }
 }
-

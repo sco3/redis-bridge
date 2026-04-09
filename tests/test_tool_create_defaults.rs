@@ -6,7 +6,10 @@ fn test_tool_create_defaults() {
     assert_eq!(tool.name, String::new());
     assert_eq!(tool.integration_type, "REST");
     assert_eq!(tool.request_type, "SSE");
-    assert_eq!(tool.input_schema, serde_json::json!({"type": "object", "properties": {}}));
+    assert_eq!(
+        tool.input_schema,
+        serde_json::json!({"type": "object", "properties": {}})
+    );
     assert!(tool.output_schema.is_none());
     assert!(tool.url.is_none());
     assert!(tool.headers.is_none());

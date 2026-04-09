@@ -41,10 +41,7 @@ impl RedisSubscriber {
     /// # Errors
     ///
     /// Returns an error if the Redis connection fails or the subscription cannot be established.
-    pub async fn run<F, T>(
-        &self,
-        mut handler: F,
-    ) -> Result<(), RedisError>
+    pub async fn run<F, T>(&self, mut handler: F) -> Result<(), RedisError>
     where
         F: FnMut(serde_json::Value) -> T + Send + Sync + 'static,
         T: std::future::Future<Output = ()> + Send,

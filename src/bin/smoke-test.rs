@@ -44,10 +44,18 @@ struct Args {
 struct Colors;
 
 impl Colors {
-    fn cyan() -> &'static str { "\x1b[0;36m" }
-    fn green() -> &'static str { "\x1b[0;32m" }
-    fn red() -> &'static str { "\x1b[0;31m" }
-    fn reset() -> &'static str { "\x1b[0m" }
+    fn cyan() -> &'static str {
+        "\x1b[0;36m"
+    }
+    fn green() -> &'static str {
+        "\x1b[0;32m"
+    }
+    fn red() -> &'static str {
+        "\x1b[0;31m"
+    }
+    fn reset() -> &'static str {
+        "\x1b[0m"
+    }
 }
 
 fn log(msg: &str) {
@@ -65,13 +73,13 @@ async fn main() {
     let args = Args::parse();
     let cfg = &args.config;
 
-    let tool_suffix = args
-        .tool_suffix
-        .unwrap_or_else(|| std::time::SystemTime::now()
+    let tool_suffix = args.tool_suffix.unwrap_or_else(|| {
+        std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs()
-            .to_string());
+            .to_string()
+    });
 
     let tool_name = format!("smoke-test-tool-{}", tool_suffix);
 
@@ -89,13 +97,10 @@ async fn main() {
     });
     let redis_client = RedisClient::new(redis_cfg, None, None, None);
     redis_client.connect();
-    redis_client
-        .wait_for_connect()
-        .await
-        .unwrap_or_else(|e| {
-            fail(&format!("Failed to connect to Redis: {}", e));
-            std::process::exit(1);
-        });
+    redis_client.wait_for_connect().await.unwrap_or_else(|e| {
+        fail(&format!("Failed to connect to Redis: {}", e));
+        std::process::exit(1);
+    });
     ok(&format!("Redis ready at {}", cfg.redis_url));
 
     // ─── Step 1: Spawn redis-bridge ────────────────────────────────────
@@ -151,7 +156,10 @@ async fn main() {
             fail(&format!("Failed to publish to Redis: {}", e));
             std::process::exit(1);
         });
-    ok(&format!("Published event ({} subscriber(s) received)", result));
+    ok(&format!(
+        "Published event ({} subscriber(s) received)",
+        result
+    ));
 
     // Give the bridge time to process
     tokio::time::sleep(Duration::from_secs(2)).await;
@@ -175,8 +183,7 @@ async fn main() {
         algorithm: cfg.jwt_algorithm.clone(),
         ..Default::default()
     };
-    let token = jwt::generate_jwt_token(&jwt_cfg)
-        .expect("Failed to generate JWT");
+    let token = jwt::generate_jwt_token(&jwt_cfg).expect("Failed to generate JWT");
 
     let deadline = Instant::now() + Duration::from_secs(args.verify_timeout_secs);
     let poll_interval = Duration::from_secs(args.poll_interval_secs);
