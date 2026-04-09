@@ -38,7 +38,7 @@ impl ApiClient {
         Ok(Self { client, config })
     }
 
-    fn get_auth_token(&self) -> Result<String, ApiError> {
+    pub fn get_auth_token(&self) -> Result<String, ApiError> {
         if self.config.use_predefined_token {
             if let Some(token) = &self.config.bearer_token {
                 info!("Using pre-defined bearer token");
@@ -147,10 +147,68 @@ mod tests {
         assert!(err.to_string().contains("JWT generation failed"));
     }
 
+    // Note: reqwest::Error doesn't have a public constructor, so we skip direct Http error tests
+    // The Http error path is exercised through integration tests with mockito
+
     #[test]
     fn test_api_client_creation() {
         let config = Config::try_parse_from(["redis-bridge"]).unwrap();
         let client = ApiClient::new(config);
         assert!(client.is_ok());
+    }
+
+    #[test]
+    fn test_api_client_custom_config() {
+        let config = Config::try_parse_from([
+            "redis-bridge",
+            "--gateway-url", "http://custom-gateway:8080",
+            "--jwt-secret", "custom-secret",
+            "--jwt-username", "user@test.com",
+        ])
+        .unwrap();
+        let client = ApiClient::new(config);
+        assert!(client.is_ok());
+    }
+
+    #[test]
+    fn test_api_client_get_auth_token_jwt() {
+        let config = Config::try_parse_from(["redis-bridge"]).unwrap();
+        let client = ApiClient::new(config).unwrap();
+        let token = client.get_auth_token();
+        assert!(token.is_ok());
+        let token_str = token.unwrap();
+        // JWT should have 3 parts
+        let parts: Vec<&str> = token_str.split('.').collect();
+        assert_eq!(parts.len(), 3);
+    }
+
+    #[test]
+    fn test_api_client_get_auth_token_predefined() {
+        let config = Config::try_parse_from([
+            "redis-bridge",
+            "--use-predefined-token",
+            "--bearer-token", "my-predefined-token",
+        ])
+        .unwrap();
+        let client = ApiClient::new(config).unwrap();
+        let token = client.get_auth_token();
+        assert!(token.is_ok());
+        assert_eq!(token.unwrap(), "my-predefined-token");
+    }
+
+    #[test]
+    fn test_api_client_predefined_token_fallback_to_jwt() {
+        let config = Config::try_parse_from([
+            "redis-bridge",
+            "--use-predefined-token",
+        ])
+        .unwrap();
+        let client = ApiClient::new(config).unwrap();
+        let token = client.get_auth_token();
+        // Should fallback to JWT generation
+        assert!(token.is_ok());
+        let token_str = token.unwrap();
+        let parts: Vec<&str> = token_str.split('.').collect();
+        assert_eq!(parts.len(), 3);
     }
 }
