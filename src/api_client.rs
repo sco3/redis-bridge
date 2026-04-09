@@ -73,12 +73,15 @@ impl ApiClient {
 
         info!("Sending tool creation request to: {}", url);
 
+        // Gateway expects payload wrapped in {"tool": {...}}
+        let body = serde_json::json!({"tool": tool});
+
         let response = self
             .client
             .post(&url)
             .bearer_auth(&token)
             .header("Content-Type", "application/json")
-            .json(tool)
+            .json(&body)
             .send()
             .await?;
 
@@ -108,6 +111,10 @@ impl ApiClient {
 
     /// Create a tool from a raw JSON value.
     ///
+    /// Handles both formats:
+    /// - Direct tool object: `{"name": "...", "url": "...", ...}`
+    /// - Wrapped: `{"tool": {"name": "...", "url": "...", ...}}`
+    ///
     /// # Errors
     ///
     /// Returns an error if the JSON cannot be deserialized into a `ToolCreate`
@@ -116,7 +123,14 @@ impl ApiClient {
         &self,
         json_value: serde_json::Value,
     ) -> Result<serde_json::Value, ApiError> {
-        let tool = ToolCreate::from_value(json_value.clone()).map_err(|e| {
+        // Unwrap {"tool": {...}} if present
+        let tool_value = if let Some(tool) = json_value.get("tool") {
+            tool.clone()
+        } else {
+            json_value
+        };
+
+        let tool = ToolCreate::from_value(tool_value.clone()).map_err(|e| {
             error!("Failed to parse ToolCreate from JSON: {}", e);
             ApiError::Serialization(e)
         })?;

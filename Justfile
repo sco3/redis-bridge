@@ -52,3 +52,7 @@ fmt-check:
 
 # Full CI-style check: fmt, check, clippy, test
 ci: fmt-check check clippy test
+
+# Run end-to-end smoke test (requires running Redis + gateway)
+smoke-test:
+    cargo run --bin smoke-test
