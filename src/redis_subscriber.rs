@@ -16,12 +16,26 @@ pub enum RedisError {
 
 pub struct RedisSubscriber {
     config: Config,
+    client: Option<RedisClient>,
 }
 
 impl RedisSubscriber {
+    /// Create a subscriber that will build its own Redis client from config.
     #[must_use]
     pub fn new(config: Config) -> Self {
-        Self { config }
+        Self {
+            config,
+            client: None,
+        }
+    }
+
+    /// Create a subscriber with a pre-built Redis client (for testing with mocks).
+    #[must_use]
+    pub fn with_client(config: Config, client: RedisClient) -> Self {
+        Self {
+            config,
+            client: Some(client),
+        }
     }
 
     /// Returns the Redis URL this subscriber is configured with.
@@ -41,21 +55,29 @@ impl RedisSubscriber {
     /// # Errors
     ///
     /// Returns an error if the Redis connection fails or the subscription cannot be established.
-    pub async fn run<F, T>(&self, mut handler: F) -> Result<(), RedisError>
+    pub async fn run<F, T>(&self, handler: F) -> Result<(), RedisError>
     where
         F: FnMut(serde_json::Value) -> T + Send + Sync + 'static,
         T: std::future::Future<Output = ()> + Send,
     {
-        info!("Connecting to Redis at {}", self.config.redis_url);
+        match &self.client {
+            Some(client) => self.run_loop(client, handler).await,
+            None => {
+                info!("Connecting to Redis at {}", self.config.redis_url);
+                let config = RedisConfig::from_url(&self.config.redis_url)?;
+                let client = RedisClient::new(config, None, None, None);
+                let _conn_handle = client.connect();
+                client.wait_for_connect().await?;
+                self.run_loop(&client, handler).await
+            }
+        }
+    }
 
-        let config = RedisConfig::from_url(&self.config.redis_url)?;
-        let client = RedisClient::new(config, None, None, None);
-
-        // Connect to Redis — store the handle so the connection task isn't dropped
-        let _conn_handle = client.connect();
-        client.wait_for_connect().await?;
-
-        // Get the message stream before subscribing
+    async fn run_loop<F, T>(&self, client: &RedisClient, mut handler: F) -> Result<(), RedisError>
+    where
+        F: FnMut(serde_json::Value) -> T + Send + Sync + 'static,
+        T: std::future::Future<Output = ()> + Send,
+    {
         let mut message_stream = client.message_rx();
 
         info!("Subscribing to channel: {}", self.config.redis_channel);

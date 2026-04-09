@@ -1,14 +1,11 @@
 use clap::Parser;
-use redis_bridge::api_client::ApiClient;
+use redis_bridge::app;
 use redis_bridge::config::Config;
-use redis_bridge::redis_subscriber::RedisSubscriber;
-use tokio::signal;
 use tracing::{error, info, warn};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // Initialize tracing
+/// Initialize the tracing subscriber with sensible defaults.
+pub fn init_tracing() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
@@ -22,26 +19,25 @@ async fn main() -> anyhow::Result<()> {
                 .unwrap_or_else(|_| EnvFilter::new("redis_bridge=info")),
         )
         .init();
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // Initialize tracing
+    init_tracing();
 
     // Parse CLI config (supports both CLI args and env vars)
     let config = Config::parse();
 
     // Validate critical production settings
-    if std::env::var("JWT_SECRET_KEY").is_err() {
-        warn!("JWT_SECRET_KEY is not set. Using test default — DO NOT use in production!");
+    for warning in app::validate_config(&config) {
+        warn!("{}", warning);
     }
 
-    info!("Starting Redis Bridge v{}", env!("CARGO_PKG_VERSION"));
-    info!("Redis URL: {}", config.redis_url);
-    info!("Redis Channel: {}", config.redis_channel);
-    info!("Gateway URL: {}", config.gateway_url);
-    info!("Tool Endpoint: {}", config.tool_endpoint);
+    app::log_startup(&config);
 
-    // Create API client
-    let api_client = ApiClient::new(config.clone())?;
-
-    // Create Redis subscriber
-    let subscriber = RedisSubscriber::new(config.clone());
+    // Create application components
+    let (api_client, subscriber) = app::create_app(&config)?;
 
     // Run the subscription loop with reconnection and graceful shutdown
     info!("Starting Redis subscription loop...");
@@ -50,57 +46,25 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         let api_client = api_client.clone();
-        let shutdown_fut = async {
-            let ctrl_c = async {
-                signal::ctrl_c()
-                    .await
-                    .expect("Failed to install Ctrl+C handler");
-            };
-
-            #[cfg(unix)]
-            let terminate = async {
-                signal::unix::signal(signal::unix::SignalKind::terminate())
-                    .expect("Failed to install SIGTERM handler")
-                    .recv()
-                    .await;
-            };
-
-            #[cfg(not(unix))]
-            let terminate = std::future::pending::<()>();
-
-            tokio::select! {
-                _ = ctrl_c => info!("Received Ctrl+C, shutting down gracefully..."),
-                _ = terminate => info!("Received SIGTERM, shutting down gracefully..."),
-            }
-        };
-
         tokio::select! {
             result = subscriber.run(move |json_value| {
                 let api_client = api_client.clone();
                 async move {
-                    info!("Processing notification...");
-                    match api_client.create_tool_from_json(json_value.clone()).await {
-                        Ok(response) => {
-                            info!("Tool created successfully: {:?}", response);
-                        }
-                        Err(e) => {
-                            error!("Failed to create tool: {}", e);
-                        }
-                    }
+                    app::handle_message(&api_client, json_value).await;
                 }
             }) => {
                 if let Err(e) = result {
                     attempt += 1;
-                    let backoff = std::cmp::min(5 * 2u32.pow(attempt.min(4)), 60);
+                    let backoff = app::calculate_backoff(attempt);
                     error!("Redis subscription failed: {} (attempt {})", e, attempt);
                     warn!("Reconnecting in {} seconds...", backoff);
-                    tokio::time::sleep(std::time::Duration::from_secs(backoff as u64)).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
                 } else {
                     info!("Redis subscription ended normally.");
                     break;
                 }
             }
-            _ = shutdown_fut => {
+            _ = app::shutdown_signal() => {
                 info!("Shutdown requested, exiting.");
                 break;
             }

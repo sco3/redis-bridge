@@ -25,3 +25,8 @@ futures-util = "0.3"
 [dev-dependencies]
 tokio-test = "0.4"
 mockito = "1"
+serial_test = "3"
+
+[[test]]
+name = "test_main_functions"
+harness = true
