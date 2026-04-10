@@ -17,7 +17,7 @@ use clap::Parser;
 use fred::prelude::*;
 use redis_bridge::config::Config;
 use redis_bridge::jwt::{self, JwtConfig};
-use reqwest::Client;
+use reqwest::Client as HttpClient;
 use serde_json::json;
 use tokio::process::Command;
 
@@ -69,10 +69,8 @@ fn fail(msg: &str) {
 }
 
 #[tokio::main]
-#[allow(clippy::too_many_lines)]
 async fn main() {
     let args = Args::parse();
-    let cfg = &args.config;
 
     let tool_suffix = args.tool_suffix.unwrap_or_else(|| {
         std::time::SystemTime::now()
@@ -84,31 +82,45 @@ async fn main() {
 
     let tool_name = format!("smoke-test-tool-{tool_suffix}");
 
+    print_banner();
+
+    let redis_client = connect_redis(&args.config).await;
+    let bridge = spawn_bridge(&args.config).await;
+    publish_test_event(&redis_client, &args.config, &tool_name).await;
+    let found = verify_tool_created(&args.config, &tool_name, args.verify_timeout_secs, args.poll_interval_secs).await;
+    cleanup_bridge(bridge).await;
+    print_summary(found);
+}
+
+fn print_banner() {
     println!();
     log("═══════════════════════════════════════════");
     log(" redis-bridge  Smoke Test");
     log("═══════════════════════════════════════════");
     println!();
+}
 
-    // ─── Step 0: Verify Redis connectivity ─────────────────────────────
+async fn connect_redis(cfg: &Config) -> fred::clients::Client {
     log("Checking Redis...");
     let redis_cfg = fred::types::config::Config::from_url(&cfg.redis_url).unwrap_or_else(|e| {
         fail(&format!("Invalid Redis URL '{}': {}", cfg.redis_url, e));
         std::process::exit(1);
     });
-    let redis_client = Builder::from_config(redis_cfg).build().unwrap_or_else(|e| {
+    let client = Builder::from_config(redis_cfg).build().unwrap_or_else(|e| {
         fail(&format!("Failed to build Redis client: {e}"));
         std::process::exit(1);
     });
-    redis_client.init().await.unwrap_or_else(|e| {
+    client.init().await.unwrap_or_else(|e| {
         fail(&format!("Failed to connect to Redis: {e}"));
         std::process::exit(1);
     });
     ok(&format!("Redis ready at {}", cfg.redis_url));
+    client
+}
 
-    // ─── Step 1: Spawn redis-bridge ────────────────────────────────────
+async fn spawn_bridge(cfg: &Config) -> tokio::process::Child {
     log("Launching redis-bridge...");
-    let mut bridge = Command::new(
+    let bridge = Command::new(
         std::env::current_exe()
             .unwrap()
             .parent()
@@ -131,12 +143,12 @@ async fn main() {
         std::process::exit(1);
     });
     log(&format!("Bridge PID: {}", bridge.id().unwrap_or(0)));
-
-    // Give the bridge time to connect and subscribe
     tokio::time::sleep(Duration::from_secs(2)).await;
     ok("Bridge is running");
+    bridge
+}
 
-    // ─── Step 2: Publish test event to Redis ───────────────────────────
+async fn publish_test_event(client: &fred::clients::Client, cfg: &Config, tool_name: &str) {
     let payload = json!({
         "tool": {
             "name": tool_name,
@@ -152,7 +164,7 @@ async fn main() {
         "Publishing test event to Redis channel '{}'...",
         cfg.redis_channel
     ));
-    let _result: Value = redis_client
+    let _result: Value = client
         .publish(&cfg.redis_channel, payload_str.clone())
         .await
         .unwrap_or_else(|e| {
@@ -160,17 +172,16 @@ async fn main() {
             std::process::exit(1);
         });
     ok("Published event (payload sent)");
-
-    // Give the bridge time to process
     tokio::time::sleep(Duration::from_secs(2)).await;
+}
 
-    // ─── Step 3: Verify via REST API ───────────────────────────────────
+async fn verify_tool_created(cfg: &Config, tool_name: &str, timeout_secs: u64, poll_interval_secs: u64) -> bool {
     log(&format!(
         "Polling {}/tools for tool '{}'...",
         cfg.gateway_url, tool_name
     ));
 
-    let client = Client::builder()
+    let http_client = HttpClient::builder()
         .timeout(Duration::from_secs(10))
         .build()
         .expect("Failed to build HTTP client");
@@ -185,12 +196,11 @@ async fn main() {
     };
     let token = jwt::generate_jwt_token(&jwt_cfg).expect("Failed to generate JWT");
 
-    let deadline = Instant::now() + Duration::from_secs(args.verify_timeout_secs);
-    let poll_interval = Duration::from_secs(args.poll_interval_secs);
+    let deadline = Instant::now() + Duration::from_secs(timeout_secs);
+    let poll_interval = Duration::from_secs(poll_interval_secs);
 
-    let mut found = false;
     while Instant::now() < deadline {
-        let resp = client
+        let resp = http_client
             .get(format!("{}/tools", cfg.gateway_url.trim_end_matches('/')))
             .header("Authorization", format!("Bearer {token}"))
             .send()
@@ -199,9 +209,8 @@ async fn main() {
         match resp {
             Ok(resp) if resp.status().is_success() => {
                 let body = resp.text().await.unwrap_or_default();
-                if body.contains(&tool_name) {
-                    found = true;
-                    break;
+                if body.contains(tool_name) {
+                    return true;
                 }
             }
             _ => {}
@@ -210,11 +219,15 @@ async fn main() {
         tokio::time::sleep(poll_interval).await;
     }
 
-    // ─── Cleanup: kill bridge ──────────────────────────────────────────
+    false
+}
+
+async fn cleanup_bridge(mut bridge: tokio::process::Child) {
     bridge.start_kill().ok();
     let _ = bridge.wait().await;
+}
 
-    // ─── Summary ────────────────────────────────────────────────────────
+fn print_summary(found: bool) {
     println!();
     log("═══════════════════════════════════════════");
     if found {
