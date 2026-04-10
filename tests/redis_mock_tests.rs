@@ -1,4 +1,4 @@
-// Integration tests for Redis mocking functionality using fred v9
+// Integration tests for Redis mocking functionality using fred v10
 use fred::mocks::{Buffer, Echo, MockCommand, Mocks, SimpleMap};
 use fred::prelude::*;
 use std::sync::Arc;
@@ -7,13 +7,12 @@ use std::sync::Arc;
 #[tokio::test]
 async fn test_mock_string_operations() {
     let simple_map = Arc::new(SimpleMap::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(simple_map.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    client.init().await.unwrap();
 
     // Test SET
     let _: () = client
@@ -30,13 +29,12 @@ async fn test_mock_string_operations() {
 #[tokio::test]
 async fn test_mock_sequential_operations() {
     let simple_map = Arc::new(SimpleMap::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(simple_map.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    client.init().await.unwrap();
 
     let _: () = client.set("counter", "0", None, None, false).await.unwrap();
     let _: () = client.set("counter", "1", None, None, false).await.unwrap();
@@ -49,19 +47,18 @@ async fn test_mock_sequential_operations() {
 /// Test hash operations - Echo returns the arguments
 #[tokio::test]
 async fn test_mock_hash_operations() {
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(Arc::new(Echo)),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    client.init().await.unwrap();
 
     // hset takes a RedisMap (HashMap of field->value pairs)
-    // Echo returns the args, so we get back a Vec of RedisValue
+    // Echo returns the args, so we get back a Vec of Value
     let mut map = std::collections::HashMap::new();
     map.insert("name", "John Doe");
-    let result: Vec<RedisValue> = client.hset("user:1000", map).await.unwrap();
+    let result: Vec<Value> = client.hset("user:1000", map).await.unwrap();
 
     // Echo returns [key, field1, value1, ...]
     assert!(!result.is_empty());
@@ -71,15 +68,14 @@ async fn test_mock_hash_operations() {
 #[tokio::test]
 async fn test_mock_pubsub_with_buffer() {
     let buffer = Arc::new(Buffer::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(buffer.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    client.init().await.unwrap();
 
-    let _: String = client
+    let _: Value = client
         .publish("notifications", "Hello subscribers!")
         .await
         .unwrap();
@@ -93,13 +89,12 @@ async fn test_mock_pubsub_with_buffer() {
 #[tokio::test]
 async fn test_mock_json_message() {
     let simple_map = Arc::new(SimpleMap::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(simple_map.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    client.init().await.unwrap();
 
     let message = serde_json::json!({
         "event": "tool_created",
@@ -126,9 +121,9 @@ impl Mocks for ErrorMock {
     fn process_command(
         &self,
         _command: MockCommand,
-    ) -> Result<RedisValue, fred::error::RedisError> {
-        Err(fred::error::RedisError::new(
-            fred::error::RedisErrorKind::NotFound,
+    ) -> Result<Value, Error> {
+        Err(Error::new(
+            ErrorKind::NotFound,
             "ERR no such key",
         ))
     }
@@ -136,13 +131,13 @@ impl Mocks for ErrorMock {
 
 #[tokio::test]
 async fn test_mock_error_handling() {
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(Arc::new(ErrorMock)),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
     let result: Result<String, _> = client.get("missing_key").await;
     assert!(result.is_err());
@@ -152,13 +147,13 @@ async fn test_mock_error_handling() {
 #[tokio::test]
 async fn test_mock_list_operations() {
     let buffer = Arc::new(Buffer::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(buffer.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
     let _: String = client.lpush("tasks", "task1").await.unwrap();
     let _: String = client.lpush("tasks", "task2").await.unwrap();
@@ -175,13 +170,13 @@ async fn test_mock_list_operations() {
 #[tokio::test]
 async fn test_mock_set_operations() {
     let buffer = Arc::new(Buffer::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(buffer.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
     let _: String = client.sadd("tags", "rust").await.unwrap();
     let _: String = client.sadd("tags", "redis").await.unwrap();
@@ -198,20 +193,20 @@ async fn test_mock_set_operations() {
 #[tokio::test]
 async fn test_mock_expiration() {
     let buffer = Arc::new(Buffer::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(buffer.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
     let _: () = client
         .set("session:abc", "active", None, None, false)
         .await
         .unwrap();
-    let _: String = client.expire("session:abc", 3600).await.unwrap();
-    let _: String = client.ttl("session:abc").await.unwrap();
+    let _: () = client.expire("session:abc", 3600, None).await.unwrap();
+    let _: Value = client.ttl("session:abc").await.unwrap();
 
     let commands = buffer.take();
     assert_eq!(commands.len(), 3);
@@ -224,14 +219,13 @@ async fn test_mock_expiration() {
 #[tokio::test]
 async fn test_mock_multiple_clients() {
     let map1 = Arc::new(SimpleMap::new());
-    let config1 = RedisConfig {
+    let config1 = Config {
         mocks: Some(map1.clone()),
         ..Default::default()
     };
 
-    let client1 = RedisClient::new(config1, None, None, None);
-    client1.connect();
-    client1.wait_for_connect().await.unwrap();
+    let client1 = Builder::from_config(config1).build().unwrap();
+    client1.init().await.unwrap();
 
     // Set and get with first client
     let _: () = client1
@@ -243,14 +237,13 @@ async fn test_mock_multiple_clients() {
 
     // Create second client with its own map
     let map2 = Arc::new(SimpleMap::new());
-    let config2 = RedisConfig {
+    let config2 = Config {
         mocks: Some(map2.clone()),
         ..Default::default()
     };
 
-    let client2 = RedisClient::new(config2, None, None, None);
-    client2.connect();
-    client2.wait_for_connect().await.unwrap();
+    let client2 = Builder::from_config(config2).build().unwrap();
+    client2.init().await.unwrap();
 
     let _: () = client2
         .set("client2_key", "value2", None, None, false)
@@ -268,13 +261,13 @@ async fn test_mock_multiple_clients() {
 #[tokio::test]
 async fn test_mock_tool_notification_scenario() {
     let simple_map = Arc::new(SimpleMap::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(simple_map.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
     // Simulate a realistic tool notification payload
     let tool_notification = serde_json::json!({
@@ -323,32 +316,32 @@ async fn test_mock_tool_notification_scenario() {
 /// Test Echo mock returns arguments
 #[tokio::test]
 async fn test_echo_mock_returns_args() {
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(Arc::new(Echo)),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
-    let result: Vec<RedisValue> = client.set("foo", "bar", None, None, false).await.unwrap();
+    let result: Vec<Value> = client.set("foo", "bar", None, None, false).await.unwrap();
 
     assert_eq!(result.len(), 2);
-    assert_eq!(result[0], RedisValue::String("foo".into()));
-    assert_eq!(result[1], RedisValue::String("bar".into()));
+    assert_eq!(result[0], Value::String("foo".into()));
+    assert_eq!(result[1], Value::String("bar".into()));
 }
 
 /// Test Buffer mock clear and len
 #[tokio::test]
 async fn test_buffer_clear() {
     let buffer = Arc::new(Buffer::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(buffer.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
     let _: String = client.set("foo", "bar", None, None, false).await.unwrap();
     assert_eq!(buffer.len(), 1);
@@ -360,13 +353,13 @@ async fn test_buffer_clear() {
 /// Test pipeline with Echo mock
 #[tokio::test]
 async fn test_pipeline_with_echo() {
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(Arc::new(Echo)),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
     let pipeline = client.pipeline();
     pipeline.get::<(), _>("foo").await.unwrap();
@@ -380,13 +373,13 @@ async fn test_pipeline_with_echo() {
 #[tokio::test]
 async fn test_subscribe_recorded() {
     let buffer = Arc::new(Buffer::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(buffer.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
     client.subscribe("test_channel").await.unwrap();
 
@@ -399,13 +392,13 @@ async fn test_subscribe_recorded() {
 #[tokio::test]
 async fn test_simple_map_multiple_values() {
     let simple_map = Arc::new(SimpleMap::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(simple_map.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    
+    client.init().await.unwrap();
 
     // Set multiple keys
     for i in 0..10 {

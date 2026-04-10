@@ -5,13 +5,12 @@ use std::sync::Arc;
 #[tokio::test]
 async fn test_mock_simple_map_set_get() {
     let simple_map = Arc::new(SimpleMap::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(simple_map.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    client.init().await.unwrap();
 
     let _: () = client.set("foo", "bar", None, None, false).await.unwrap();
     let val: String = client.get("foo").await.unwrap();

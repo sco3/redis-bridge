@@ -91,13 +91,15 @@ async fn main() {
 
     // ─── Step 0: Verify Redis connectivity ─────────────────────────────
     log("Checking Redis...");
-    let redis_cfg = RedisConfig::from_url(&cfg.redis_url).unwrap_or_else(|e| {
+    let redis_cfg = fred::types::config::Config::from_url(&cfg.redis_url).unwrap_or_else(|e| {
         fail(&format!("Invalid Redis URL '{}': {}", cfg.redis_url, e));
         std::process::exit(1);
     });
-    let redis_client = RedisClient::new(redis_cfg, None, None, None);
-    redis_client.connect();
-    redis_client.wait_for_connect().await.unwrap_or_else(|e| {
+    let redis_client = Builder::from_config(redis_cfg).build().unwrap_or_else(|e| {
+        fail(&format!("Failed to build Redis client: {}", e));
+        std::process::exit(1);
+    });
+    redis_client.init().await.unwrap_or_else(|e| {
         fail(&format!("Failed to connect to Redis: {}", e));
         std::process::exit(1);
     });
@@ -149,7 +151,7 @@ async fn main() {
         "Publishing test event to Redis channel '{}'...",
         cfg.redis_channel
     ));
-    let result: i64 = redis_client
+    let _result: Value = redis_client
         .publish(&cfg.redis_channel, payload_str.clone())
         .await
         .unwrap_or_else(|e| {
@@ -157,8 +159,7 @@ async fn main() {
             std::process::exit(1);
         });
     ok(&format!(
-        "Published event ({} subscriber(s) received)",
-        result
+        "Published event (payload sent)",
     ));
 
     // Give the bridge time to process

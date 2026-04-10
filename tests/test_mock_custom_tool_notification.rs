@@ -21,35 +21,35 @@ impl ToolNotificationMock {
 }
 
 impl Mocks for ToolNotificationMock {
-    fn process_command(&self, command: MockCommand) -> Result<RedisValue, fred::error::RedisError> {
+    fn process_command(&self, command: MockCommand) -> Result<Value, Error> {
         if &*command.cmd == "PUBLISH" {
             let channel = match command.args.first() {
-                Some(RedisValue::String(s)) => s.to_string(),
-                Some(RedisValue::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
+                Some(Value::String(s)) => s.to_string(),
+                Some(Value::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
                 _ => {
-                    return Err(fred::error::RedisError::new(
-                        fred::error::RedisErrorKind::InvalidArgument,
+                    return Err(Error::new(
+                        ErrorKind::InvalidArgument,
                         "Invalid channel",
                     ));
                 }
             };
             let message = match command.args.get(1) {
-                Some(RedisValue::String(s)) => s.to_string(),
-                Some(RedisValue::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
+                Some(Value::String(s)) => s.to_string(),
+                Some(Value::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
                 _ => {
-                    return Err(fred::error::RedisError::new(
-                        fred::error::RedisErrorKind::InvalidArgument,
+                    return Err(Error::new(
+                        ErrorKind::InvalidArgument,
                         "Invalid message",
                     ));
                 }
             };
             self.publish_buffer.lock().unwrap().push((channel, message));
-            Ok(RedisValue::Integer(1))
+            Ok(Value::Integer(1))
         } else if &*command.cmd == "SUBSCRIBE" {
-            Ok(RedisValue::Queued)
+            Ok(Value::Queued)
         } else {
-            Err(fred::error::RedisError::new(
-                fred::error::RedisErrorKind::Unknown,
+            Err(Error::new(
+                ErrorKind::Unknown,
                 "Unimplemented.",
             ))
         }
@@ -59,13 +59,12 @@ impl Mocks for ToolNotificationMock {
 #[tokio::test]
 async fn test_mock_custom_tool_notification() {
     let mock = Arc::new(ToolNotificationMock::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(mock.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    client.init().await.unwrap();
 
     let notification = serde_json::json!({
         "event_type": "tool_created",

@@ -5,7 +5,7 @@
 
 use clap::Parser;
 use fred::prelude::*;
-use redis_bridge::config::Config;
+use redis_bridge::config::Config as AppConfig;
 use redis_bridge::redis_subscriber::RedisSubscriber;
 use serde_json::json;
 use std::sync::Arc;
@@ -30,18 +30,16 @@ async fn test_redis_subscriber_receives_published_message() {
 
     // Create a publisher client (separate connection — once a client subscribes,
     // it can only run pubsub commands)
-    let pub_cfg = RedisConfig::from_url("redis://127.0.0.1:6379").unwrap();
-    let publisher = RedisClient::new(pub_cfg, None, None, None);
-    publisher.connect();
-    publisher.wait_for_connect().await.unwrap();
+    let pub_cfg = fred::types::config::Config::from_url("redis://127.0.0.1:6379").unwrap();
+    let publisher = Builder::from_config(pub_cfg).build().unwrap();
+    publisher.init().await.unwrap();
 
     // Create the subscriber with its own connection
-    let redis_cfg = RedisConfig::from_url("redis://127.0.0.1:6379").unwrap();
-    let client = RedisClient::new(redis_cfg, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let redis_cfg = fred::types::config::Config::from_url("redis://127.0.0.1:6379").unwrap();
+    let client = Builder::from_config(redis_cfg).build().unwrap();
+    client.init().await.unwrap();
 
-    let app_cfg = Config::try_parse_from([
+    let app_cfg = AppConfig::try_parse_from([
         "redis-bridge",
         "--redis-channel", "smoke_test_channel",
     ])
@@ -76,7 +74,7 @@ async fn test_redis_subscriber_receives_published_message() {
         "event_type": "test_event",
         "tool": { "name": "integration-test-tool" },
     });
-    let _: i64 = publisher
+    let _: Value = publisher
         .publish("smoke_test_channel", test_payload.to_string())
         .await
         .unwrap();
@@ -91,7 +89,7 @@ async fn test_redis_subscriber_receives_published_message() {
     }
 
     // Cancel the subscriber by dropping the client
-    client.quit();
+    client.quit().await.ok();
     let _ = tokio::time::timeout(Duration::from_secs(2), sub_handle).await;
 
     assert!(

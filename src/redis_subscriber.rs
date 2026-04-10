@@ -2,12 +2,12 @@ use fred::prelude::*;
 use thiserror::Error;
 use tracing::{info, warn};
 
-use crate::config::Config;
+use crate::config::Config as AppConfig;
 
 #[derive(Error, Debug)]
 pub enum RedisError {
     #[error("Failed to connect to Redis: {0}")]
-    Connection(#[from] fred::error::RedisError),
+    Connection(#[from] Error),
     #[error("Failed to subscribe to channel: {0}")]
     Subscription(String),
     #[error("Failed to parse message: {0}")]
@@ -15,14 +15,14 @@ pub enum RedisError {
 }
 
 pub struct RedisSubscriber {
-    config: Config,
-    client: Option<RedisClient>,
+    config: AppConfig,
+    client: Option<Client>,
 }
 
 impl RedisSubscriber {
     /// Create a subscriber that will build its own Redis client from config.
     #[must_use]
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: AppConfig) -> Self {
         Self {
             config,
             client: None,
@@ -31,7 +31,7 @@ impl RedisSubscriber {
 
     /// Create a subscriber with a pre-built Redis client (for testing with mocks).
     #[must_use]
-    pub fn with_client(config: Config, client: RedisClient) -> Self {
+    pub fn with_client(config: AppConfig, client: Client) -> Self {
         Self {
             config,
             client: Some(client),
@@ -64,16 +64,15 @@ impl RedisSubscriber {
             Some(client) => self.run_loop(client, handler).await,
             None => {
                 info!("Connecting to Redis at {}", self.config.redis_url);
-                let config = RedisConfig::from_url(&self.config.redis_url)?;
-                let client = RedisClient::new(config, None, None, None);
-                let _conn_handle = client.connect();
-                client.wait_for_connect().await?;
+                let redis_config = fred::types::config::Config::from_url(&self.config.redis_url)?;
+                let client = Builder::from_config(redis_config).build()?;
+                client.init().await?;
                 self.run_loop(&client, handler).await
             }
         }
     }
 
-    async fn run_loop<F, T>(&self, client: &RedisClient, mut handler: F) -> Result<(), RedisError>
+    async fn run_loop<F, T>(&self, client: &Client, mut handler: F) -> Result<(), RedisError>
     where
         F: FnMut(serde_json::Value) -> T + Send + Sync + 'static,
         T: std::future::Future<Output = ()> + Send,

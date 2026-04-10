@@ -1,7 +1,7 @@
 use clap::Parser;
 use fred::mocks::{MockCommand, Mocks};
 use fred::prelude::*;
-use redis_bridge::config::Config;
+use redis_bridge::config::Config as AppConfig;
 use redis_bridge::redis_subscriber::RedisSubscriber;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -27,18 +27,18 @@ impl AutoPublishMock {
 }
 
 impl Mocks for AutoPublishMock {
-    fn process_command(&self, command: MockCommand) -> Result<RedisValue, fred::error::RedisError> {
+    fn process_command(&self, command: MockCommand) -> Result<Value, Error> {
         match &*command.cmd {
             "SUBSCRIBE" => {
                 self.message_count.fetch_add(1, Ordering::SeqCst);
                 // Return a successful subscribe response
-                Ok(RedisValue::Queued)
+                Ok(Value::Queued)
             }
             "PUBLISH" => {
                 self.message_count.fetch_add(1, Ordering::SeqCst);
-                Ok(RedisValue::Integer(1))
+                Ok(Value::Integer(1))
             }
-            _ => Ok(RedisValue::Queued),
+            _ => Ok(Value::Queued),
         }
     }
 }
@@ -48,15 +48,14 @@ async fn test_redis_subscriber_with_custom_client() {
     // Verify that with_client constructor works and the subscriber
     // correctly calls through to the mock client
     let mock = Arc::new(AutoPublishMock::new());
-    let config = RedisConfig {
+    let config = Config {
         mocks: Some(mock.clone()),
         ..Default::default()
     };
-    let client = RedisClient::new(config, None, None, None);
-    client.connect();
-    client.wait_for_connect().await.unwrap();
+    let client = Builder::from_config(config).build().unwrap();
+    client.init().await.unwrap();
 
-    let app_config = Config::try_parse_from(["redis-bridge"]).unwrap();
+    let app_config = AppConfig::try_parse_from(["redis-bridge"]).unwrap();
     let subscriber = RedisSubscriber::with_client(app_config, client);
 
     // Run with timeout — the mock doesn't stream messages,
