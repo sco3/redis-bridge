@@ -1,20 +1,20 @@
 use clap::Parser;
 use fred::mocks::{MockCommand, Mocks};
 use fred::prelude::*;
+use fred::types::Map;
 use redis_bridge::config::Config as AppConfig;
 use redis_bridge::redis_subscriber::RedisSubscriber;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
-/// Mock that publishes a message immediately after subscribe,
-/// then closes the stream after a short delay.
+/// Mock that handles stream commands for testing.
 #[derive(Debug)]
-struct AutoPublishMock {
+struct StreamMock {
     message_count: AtomicUsize,
 }
 
-impl AutoPublishMock {
+impl StreamMock {
     fn new() -> Self {
         Self {
             message_count: AtomicUsize::new(0),
@@ -26,15 +26,20 @@ impl AutoPublishMock {
     }
 }
 
-impl Mocks for AutoPublishMock {
+impl Mocks for StreamMock {
     fn process_command(&self, command: MockCommand) -> Result<Value, Error> {
         match &*command.cmd {
-            "SUBSCRIBE" => {
+            "XGROUP" => {
                 self.message_count.fetch_add(1, Ordering::SeqCst);
-                // Return a successful subscribe response
-                Ok(Value::Queued)
+                // Return success
+                Ok(Value::from_static_str("OK"))
             }
-            "PUBLISH" => {
+            "XREADGROUP" => {
+                self.message_count.fetch_add(1, Ordering::SeqCst);
+                // Return empty map (no messages scenario)
+                Ok(Value::Map(Map::new()))
+            }
+            "XACK" => {
                 self.message_count.fetch_add(1, Ordering::SeqCst);
                 Ok(Value::Integer(1))
             }
@@ -47,7 +52,7 @@ impl Mocks for AutoPublishMock {
 async fn test_redis_subscriber_with_custom_client() {
     // Verify that with_client constructor works and the subscriber
     // correctly calls through to the mock client
-    let mock = Arc::new(AutoPublishMock::new());
+    let mock = Arc::new(StreamMock::new());
     let config = Config {
         mocks: Some(mock.clone()),
         ..Default::default()
@@ -66,6 +71,6 @@ async fn test_redis_subscriber_with_custom_client() {
     // Timeout is expected (no messages delivered through stream in mock mode)
     assert!(result.is_err());
 
-    // Verify subscribe was called
+    // Verify commands were called
     assert!(mock.count() > 0);
 }

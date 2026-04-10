@@ -1,18 +1,20 @@
 # Redis Bridge
 
-A Rust application that subscribes to Redis notifications and automatically creates tools in the MCP Gateway via REST API.
+A Rust application that reads notifications from Redis Streams and automatically creates tools in the MCP Gateway via REST API.
 
 ## Overview
 
 This application:
-1. Subscribes to a Redis Pub/Sub channel for tool notifications
+1. Reads messages from a Redis Stream using consumer groups
 2. When a notification is received, parses the JSON payload
 3. Generates a JWT token for authentication (using HS256 algorithm from the mcp-benchmark project)
 4. Sends a POST request to the MCP Gateway's `/tools` endpoint to create the tool
+5. Acknowledges the message in the stream after successful processing
 
 ## Features
 
-- **Redis Pub/Sub Subscription**: Listens for tool creation notifications on a configurable Redis channel
+- **Redis Streams Consumer Groups**: Reliable message processing with automatic acknowledgment
+- **Message Persistence**: Messages remain in the stream until successfully processed
 - **JWT Token Generation**: Implements HS256 JWT token generation matching the mcp-benchmark algorithm
 - **REST API Integration**: Sends tool creation requests to the MCP Gateway
 - **Configurable**: All parameters configurable via CLI arguments or environment variables
@@ -25,8 +27,10 @@ All parameters can be set via CLI arguments or environment variables:
 | CLI Argument | Environment Variable | Default | Description |
 |-------------|---------------------|---------|-------------|
 | `--redis-url` | `REDIS_URL` | `redis://127.0.0.1:6379` | Redis connection URL |
-| `--redis-channel` | `REDIS_CHANNEL` | `tool_notifications` | Redis channel to subscribe to |
-| `--gateway-url` | `GATEWAY_URL` | `http://localhost:4444` | MCP Gateway base URL |
+| `--redis-stream` | `REDIS_STREAM` | `tool_notifications_stream` | Redis stream key to read from |
+| `--redis-stream-group` | `REDIS_STREAM_GROUP` | `bridge_consumers` | Consumer group name |
+| `--redis-stream-consumer` | `REDIS_STREAM_CONSUMER` | `bridge_consumer_1` | Consumer name (should be unique per instance) |
+| `--gateway-url` | `GATEWAY_URL` | `http://localhost:8080` | MCP Gateway base URL |
 | `--tool-endpoint` | `TOOL_ENDPOINT` | `/tools` | Tool creation endpoint path |
 | `--jwt-secret` | `JWT_SECRET_KEY` | `my-test-key-but-now-longer-than-32-bytes` | JWT signing secret |
 | `--jwt-username` | `JWT_USERNAME` | `admin@example.com` | JWT subject/username |
@@ -52,6 +56,16 @@ cargo run -- --redis-url redis://my-redis:6379 --gateway-url http://gateway:8080
 
 # Using environment variables
 REDIS_URL=redis://my-redis:6379 GATEWAY_URL=http://gateway:8080 cargo run
+```
+
+### With Custom Stream Configuration
+
+```bash
+# Custom stream and consumer group
+cargo run -- \
+  --redis-stream my_notifications \
+  --redis-stream-group my_consumers \
+  --redis-stream-consumer consumer_instance_1
 ```
 
 ### With JWT Configuration
@@ -89,24 +103,33 @@ cargo test
 - **`jwt.rs`**: JWT token generation using HS256 (HMAC-SHA256), matching the mcp-benchmark algorithm
 - **`schemas.rs`**: ToolCreate structure with full serde support for JSON serialization/deserialization
 - **`config.rs`**: CLI configuration using clap with environment variable support
-- **`redis_subscriber.rs`**: Redis Pub/Sub subscription logic
+- **`redis_subscriber.rs`**: Redis Streams consumer logic with consumer group management
 - **`api_client.rs`**: REST API client for tool creation endpoint
 - **`main.rs`**: Application entry point, orchestrates all components
 
 ### Data Flow
 
 1. Application starts and parses CLI/environment configuration
-2. Connects to Redis and subscribes to the configured channel
-3. Waits for messages on the channel
+2. Connects to Redis and ensures the consumer group exists (creates it if needed)
+3. Reads messages from the configured stream using `XREADGROUP`
 4. When a message arrives:
-   - Parses the JSON payload into a `ToolCreate` structure
+   - Parses the JSON payload from the `payload` field
    - Generates a JWT token for authentication
    - Sends a POST request to the MCP Gateway `/tools` endpoint
+   - Acknowledges the message with `XACK` after successful processing
    - Logs success or failure
 
 ## Expected JSON Format
 
-The application expects JSON messages on the Redis channel in the following format:
+The application expects messages in the Redis stream with a `payload` field containing JSON in the following format:
+
+```json
+{
+  "payload": "{\"name\":\"my-tool\",\"url\":\"http://localhost:8080/tool\",\"description\":\"A sample tool\",\"integrationType\":\"REST\",\"requestType\":\"POST\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"visibility\":\"public\"}"
+}
+```
+
+Or the JSON can be directly in the payload field value:
 
 ```json
 {
@@ -124,6 +147,25 @@ The application expects JSON messages on the Redis channel in the following form
 ```
 
 All fields from the MCP Gateway's `ToolCreate` schema are supported.
+
+## Adding Messages to the Stream
+
+To add a test notification to the Redis stream:
+
+```bash
+# Using redis-cli
+redis-cli XADD tool_notifications_stream '*' payload '{"name":"test-tool","url":"http://localhost:8080/test","description":"Test tool","integrationType":"REST","requestType":"POST"}'
+```
+
+## Redis Streams vs Pub/Sub
+
+This application uses **Redis Streams** instead of Pub/Sub for the following advantages:
+
+- **Message Persistence**: Messages remain in the stream until explicitly deleted or acknowledged
+- **Reliable Processing**: Messages are only acknowledged after successful processing
+- **Consumer Groups**: Multiple instances can share the workload efficiently
+- **Replay Capability**: Can reprocess messages if needed (by changing the stream ID)
+- **No Message Loss**: Unlike Pub/Sub, messages aren't lost if the consumer is temporarily unavailable
 
 ## JWT Token Structure
 
@@ -161,9 +203,6 @@ The generated JWT tokens follow this structure (matching mcp-benchmark):
 ```bash
 # Run unit tests
 cargo test
-
-# Send a test message to Redis
-redis-cli PUBLISH tool_notifications '{"name":"test-tool","url":"http://localhost:8080/test","description":"Test tool","integrationType":"REST","requestType":"POST"}'
 ```
 
 ## License

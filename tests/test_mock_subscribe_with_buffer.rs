@@ -3,7 +3,7 @@ use fred::prelude::*;
 use std::sync::Arc;
 
 #[tokio::test]
-async fn test_mock_subscribe_with_buffer() {
+async fn test_mock_xgroup_with_buffer() {
     let buffer = Arc::new(Buffer::new());
     let config = Config {
         mocks: Some(buffer.clone()),
@@ -12,9 +12,12 @@ async fn test_mock_subscribe_with_buffer() {
     let client = Builder::from_config(config).build().unwrap();
     client.init().await.unwrap();
 
-    client.subscribe("test_channel").await.unwrap();
+    let _: String = client
+        .xgroup_create("test_stream", "test_group", "0", true)
+        .await
+        .unwrap();
 
     let commands = buffer.take();
     assert!(!commands.is_empty());
-    assert_eq!(commands[0].cmd, "SUBSCRIBE");
+    assert_eq!(commands[0].cmd, "XGROUP");
 }

@@ -7,5 +7,5 @@ fn test_redis_subscriber_new() {
     let config = Config::try_parse_from(["redis-bridge"]).unwrap();
     let subscriber = RedisSubscriber::new(config.clone());
     assert_eq!(subscriber.redis_url(), config.redis_url);
-    assert_eq!(subscriber.redis_channel(), config.redis_channel);
+    assert_eq!(subscriber.redis_stream(), config.redis_stream);
 }

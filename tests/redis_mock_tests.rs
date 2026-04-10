@@ -64,9 +64,9 @@ async fn test_mock_hash_operations() {
     assert!(!result.is_empty());
 }
 
-/// Test publish/subscribe mocking with Buffer
+/// Test stream operations with Buffer
 #[tokio::test]
-async fn test_mock_pubsub_with_buffer() {
+async fn test_mock_stream_with_buffer() {
     let buffer = Arc::new(Buffer::new());
     let config = Config {
         mocks: Some(buffer.clone()),
@@ -75,14 +75,20 @@ async fn test_mock_pubsub_with_buffer() {
     let client = Builder::from_config(config).build().unwrap();
     client.init().await.unwrap();
 
-    let _: Value = client
-        .publish("notifications", "Hello subscribers!")
+    let _: String = client
+        .xadd(
+            "notifications",
+            false,
+            None::<()>,
+            "*",
+            vec![("payload", "Hello stream!")],
+        )
         .await
         .unwrap();
 
     let commands = buffer.take();
     assert_eq!(commands.len(), 1);
-    assert_eq!(commands[0].cmd, "PUBLISH");
+    assert_eq!(commands[0].cmd, "XADD");
 }
 
 /// Test JSON message handling in pub/sub context
@@ -363,9 +369,9 @@ async fn test_pipeline_with_echo() {
     assert_eq!(all, vec![vec!["foo"], vec!["bar"]]);
 }
 
-/// Test subscribe command is recorded
+/// Test stream commands are recorded
 #[tokio::test]
-async fn test_subscribe_recorded() {
+async fn test_stream_xgroup_recorded() {
     let buffer = Arc::new(Buffer::new());
     let config = Config {
         mocks: Some(buffer.clone()),
@@ -375,11 +381,15 @@ async fn test_subscribe_recorded() {
 
     client.init().await.unwrap();
 
-    client.subscribe("test_channel").await.unwrap();
+    // xgroup_create gets split into XGROUP CREATE command
+    let _: String = client
+        .xgroup_create("test_stream", "test_group", "0", true)
+        .await
+        .unwrap();
 
     let commands = buffer.take();
     assert!(!commands.is_empty());
-    assert_eq!(commands[0].cmd, "SUBSCRIBE");
+    assert_eq!(commands[0].cmd, "XGROUP");
 }
 
 /// Test `SimpleMap` stores and retrieves multiple values

@@ -1,7 +1,7 @@
 //! Integration test for `RedisSubscriber::run` against a real Redis instance.
 //!
 //! This requires a running Redis at `redis://127.0.0.1:6379`.
-//! The test publishes a JSON message and verifies the handler receives it.
+//! The test adds a message to the stream and verifies the handler receives it.
 
 use clap::Parser;
 use fred::prelude::*;
@@ -18,30 +18,47 @@ fn redis_available() -> bool {
 }
 
 /// Test that the subscriber's `run()` method:
-/// 1. Connects and subscribes to the channel
-/// 2. Receives a published JSON message
+/// 1. Connects and creates consumer group
+/// 2. Receives a message added to the stream
 /// 3. Passes the parsed JSON to the handler
 #[tokio::test]
-async fn test_redis_subscriber_receives_published_message() {
+async fn test_redis_subscriber_receives_stream_message() {
     if !redis_available() {
         eprintln!("Skipping: Redis not available at 127.0.0.1:6379");
         return;
     }
 
-    // Create a publisher client (separate connection — once a client subscribes,
-    // it can only run pubsub commands)
-    let pub_cfg = fred::types::config::Config::from_url("redis://127.0.0.1:6379").unwrap();
-    let publisher = Builder::from_config(pub_cfg).build().unwrap();
+    // Create a client to add messages to the stream
+    let redis_cfg = fred::types::config::Config::from_url("redis://127.0.0.1:6379").unwrap();
+    let publisher = Builder::from_config(redis_cfg).build().unwrap();
     publisher.init().await.unwrap();
 
+    // Clean up any existing consumer group from previous test runs
+    let _: String = publisher
+        .xgroup_delconsumer("test_stream_integration", "test_group", "test_consumer")
+        .await
+        .unwrap_or(String::new());
+    let _: String = publisher
+        .xgroup_destroy("test_stream_integration", "test_group")
+        .await
+        .unwrap_or(String::new());
+    let _ = publisher.del::<(), _>(&["test_stream_integration"]).await;
+
     // Create the subscriber with its own connection
+    let app_cfg = AppConfig::try_parse_from([
+        "redis-bridge",
+        "--redis-stream",
+        "test_stream_integration",
+        "--redis-stream-group",
+        "test_group",
+        "--redis-stream-consumer",
+        "test_consumer_integration",
+    ])
+    .unwrap();
+
     let redis_cfg = fred::types::config::Config::from_url("redis://127.0.0.1:6379").unwrap();
     let client = Builder::from_config(redis_cfg).build().unwrap();
     client.init().await.unwrap();
-
-    let app_cfg =
-        AppConfig::try_parse_from(["redis-bridge", "--redis-channel", "smoke_test_channel"])
-            .unwrap();
 
     let subscriber = RedisSubscriber::with_client(app_cfg, client.clone());
 
@@ -64,16 +81,22 @@ async fn test_redis_subscriber_receives_published_message() {
             .await
     });
 
-    // Give the subscriber time to subscribe
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    // Give the subscriber time to create consumer group and start reading
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
-    // Publish a test message from the separate publisher client
+    // Add a test message to the stream
     let test_payload = json!({
         "event_type": "test_event",
         "tool": { "name": "integration-test-tool" },
     });
-    let _: Value = publisher
-        .publish("smoke_test_channel", test_payload.to_string())
+    let _: String = publisher
+        .xadd(
+            "test_stream_integration",
+            false,
+            None::<()>,
+            "*",
+            vec![("payload", test_payload.to_string())],
+        )
         .await
         .unwrap();
 
@@ -90,8 +113,19 @@ async fn test_redis_subscriber_receives_published_message() {
     client.quit().await.ok();
     let _ = tokio::time::timeout(Duration::from_secs(2), sub_handle).await;
 
+    // Clean up
+    let _: String = publisher
+        .xgroup_delconsumer("test_stream_integration", "test_group", "test_consumer")
+        .await
+        .unwrap_or(String::new());
+    let _: String = publisher
+        .xgroup_destroy("test_stream_integration", "test_group")
+        .await
+        .unwrap_or(String::new());
+    let _ = publisher.del::<(), _>(&["test_stream_integration"]).await;
+
     assert!(
         received.load(Ordering::SeqCst),
-        "Handler was not called — the subscriber did not receive the published message"
+        "Handler was not called — the subscriber did not receive the stream message"
     );
 }

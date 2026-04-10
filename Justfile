@@ -17,6 +17,9 @@ check:
 clippy:
     RUSTFLAGS="-W clippy::pedantic" cargo clippy --all-targets --all-features -- -D warnings
 
+# Alias for clippy
+lint: clippy
+
 # Run tests
 test:
     cargo test --all-targets --all-features

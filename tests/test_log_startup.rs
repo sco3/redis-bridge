@@ -44,7 +44,9 @@ fn test_log_startup() {
     let all_logs = captured.join("\n");
     assert!(all_logs.contains("Starting Redis Bridge"));
     assert!(all_logs.contains(&config.redis_url));
-    assert!(all_logs.contains(&config.redis_channel));
+    assert!(all_logs.contains(&config.redis_stream));
+    assert!(all_logs.contains(&config.redis_stream_group));
+    assert!(all_logs.contains(&config.redis_stream_consumer));
     assert!(all_logs.contains(&config.gateway_url));
     assert!(all_logs.contains(&config.tool_endpoint));
 }

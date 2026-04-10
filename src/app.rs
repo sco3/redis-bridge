@@ -26,7 +26,9 @@ pub fn validate_config(config: &Config) -> Vec<String> {
 pub fn log_startup(config: &Config) {
     info!("Starting Redis Bridge v{}", env!("CARGO_PKG_VERSION"));
     info!("Redis URL: {}", config.redis_url);
-    info!("Redis Channel: {}", config.redis_channel);
+    info!("Stream Key: {}", config.redis_stream);
+    info!("Consumer Group: {}", config.redis_stream_group);
+    info!("Consumer Name: {}", config.redis_stream_consumer);
     info!("Gateway URL: {}", config.gateway_url);
     info!("Tool Endpoint: {}", config.tool_endpoint);
 }

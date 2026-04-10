@@ -102,6 +102,6 @@ fn test_create_app_success() {
     assert!(result.is_ok());
     let (api_client, subscriber) = result.unwrap();
     assert_eq!(subscriber.redis_url(), config.redis_url);
-    assert_eq!(subscriber.redis_channel(), config.redis_channel);
+    assert_eq!(subscriber.redis_stream(), config.redis_stream);
     drop(api_client);
 }

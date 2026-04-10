@@ -19,6 +19,7 @@ use redis_bridge::config::Config;
 use redis_bridge::jwt::{self, JwtConfig};
 use reqwest::Client as HttpClient;
 use serde_json::json;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
 #[derive(Parser, Debug)]
@@ -85,8 +86,20 @@ async fn main() {
     print_banner();
 
     let redis_client = connect_redis(&args.config).await;
-    let bridge = spawn_bridge(&args.config).await;
+    let (mut bridge, bridge_output_handle) = spawn_bridge(&args.config).await;
     publish_test_event(&redis_client, &args.config, &tool_name).await;
+    
+    // Check bridge status before verification
+    if let Some(status) = bridge.try_wait().unwrap() {
+        fail(&format!("Bridge exited early with status: {}", status));
+        log("Bridge stdout:");
+        if let Some(_output) = bridge_output_handle {
+            // We can't easily read from the handle after spawn, 
+            // but we've set RUST_LOG to show output
+        }
+        std::process::exit(1);
+    }
+    
     let found = verify_tool_created(&args.config, &tool_name, args.verify_timeout_secs, args.poll_interval_secs).await;
     cleanup_bridge(bridge).await;
     print_summary(found);
@@ -118,9 +131,9 @@ async fn connect_redis(cfg: &Config) -> fred::clients::Client {
     client
 }
 
-async fn spawn_bridge(cfg: &Config) -> tokio::process::Child {
+async fn spawn_bridge(cfg: &Config) -> (tokio::process::Child, Option<tokio::task::JoinHandle<()>>) {
     log("Launching redis-bridge...");
-    let bridge = Command::new(
+    let mut bridge = Command::new(
         std::env::current_exe()
             .unwrap()
             .parent()
@@ -128,14 +141,18 @@ async fn spawn_bridge(cfg: &Config) -> tokio::process::Child {
             .join("redis-bridge"),
     )
     .env("REDIS_URL", &cfg.redis_url)
-    .env("REDIS_CHANNEL", &cfg.redis_channel)
+    .env("REDIS_STREAM", &cfg.redis_stream)
+    .env("REDIS_STREAM_GROUP", &cfg.redis_stream_group)
+    .env("REDIS_STREAM_CONSUMER", &cfg.redis_stream_consumer)
     .env("GATEWAY_URL", &cfg.gateway_url)
     .env("JWT_SECRET_KEY", &cfg.jwt_secret)
     .env("JWT_USERNAME", &cfg.jwt_username)
     .env("JWT_AUDIENCE", &cfg.jwt_audience)
     .env("JWT_ISSUER", &cfg.jwt_issuer)
     .env("JWT_ALGORITHM", &cfg.jwt_algorithm)
-    .env("RUST_LOG", "redis_bridge=warn")
+    .env("RUST_LOG", "redis_bridge=info")
+    .stdout(std::process::Stdio::piped())
+    .stderr(std::process::Stdio::piped())
     .kill_on_drop(true)
     .spawn()
     .unwrap_or_else(|e| {
@@ -143,9 +160,37 @@ async fn spawn_bridge(cfg: &Config) -> tokio::process::Child {
         std::process::exit(1);
     });
     log(&format!("Bridge PID: {}", bridge.id().unwrap_or(0)));
+    
+    // Capture stdout and stderr
+    let stdout = bridge.stdout.take();
+    let stderr = bridge.stderr.take();
+    
+    // Spawn tasks to capture output
+    let output_handle = if let Some(stdout) = stdout {
+        let handle = tokio::spawn(async move {
+            let mut reader = BufReader::new(stdout).lines();
+            while let Ok(Some(line)) = reader.next_line().await {
+                println!("{}[bridge]{} {}", Colors::cyan(), Colors::reset(), line);
+            }
+        });
+        Some(handle)
+    } else {
+        None
+    };
+    
+    // Also capture stderr
+    if let Some(stderr) = stderr {
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(stderr).lines();
+            while let Ok(Some(line)) = reader.next_line().await {
+                eprintln!("{}[bridge err]{} {}", Colors::red(), Colors::reset(), line);
+            }
+        });
+    }
+    
     tokio::time::sleep(Duration::from_secs(2)).await;
     ok("Bridge is running");
-    bridge
+    (bridge, output_handle)
 }
 
 async fn publish_test_event(client: &fred::clients::Client, cfg: &Config, tool_name: &str) {
@@ -161,17 +206,23 @@ async fn publish_test_event(client: &fred::clients::Client, cfg: &Config, tool_n
     let payload_str = serde_json::to_string(&payload).unwrap();
 
     log(&format!(
-        "Publishing test event to Redis channel '{}'...",
-        cfg.redis_channel
+        "Adding test event to stream '{}'...",
+        cfg.redis_stream
     ));
-    let _result: Value = client
-        .publish(&cfg.redis_channel, payload_str.clone())
+    let _result: String = client
+        .xadd(
+            &cfg.redis_stream,
+            false,                            // nomkstream
+            None::<()>,                       // no trim strategy
+            "*",                              // autogenerate ID
+            vec![("payload", payload_str)],  // fields as Vec
+        )
         .await
         .unwrap_or_else(|e| {
-            fail(&format!("Failed to publish to Redis: {e}"));
+            fail(&format!("Failed to add to stream: {e}"));
             std::process::exit(1);
         });
-    ok("Published event (payload sent)");
+    ok("Added event to stream");
     tokio::time::sleep(Duration::from_secs(2)).await;
 }
 

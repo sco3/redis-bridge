@@ -14,14 +14,21 @@ pub struct Config {
     )]
     pub redis_url: String,
 
-    /// Redis channel to subscribe to for notifications
+    /// Redis stream key to read from
     #[arg(
-        short = 'c',
         long,
-        env = "REDIS_CHANNEL",
-        default_value = "tool_notifications"
+        env = "REDIS_STREAM",
+        default_value = "tool_notifications_stream"
     )]
-    pub redis_channel: String,
+    pub redis_stream: String,
+
+    /// Redis stream consumer group name
+    #[arg(long, env = "REDIS_STREAM_GROUP", default_value = "bridge_consumers")]
+    pub redis_stream_group: String,
+
+    /// Redis stream consumer name (unique per instance)
+    #[arg(long, env = "REDIS_STREAM_CONSUMER", default_value = "bridge_consumer_1")]
+    pub redis_stream_consumer: String,
 
     /// Base URL of the MCP Gateway API
     #[arg(
