@@ -106,9 +106,7 @@ fn main() {
         println!("  Is Admin:    {}", jwt_config.is_admin);
         println!();
         println!("Use with:");
-        println!(
-            "  curl -H \"Authorization: Bearer {token}\" http://localhost:8080/tools"
-        );
+        println!("  curl -H \"Authorization: Bearer {token}\" http://localhost:8080/tools");
     }
 }
 

@@ -407,13 +407,7 @@ async fn test_simple_map_multiple_values() {
     // Set multiple keys
     for i in 0..10 {
         let _: () = client
-            .set(
-                format!("key:{i}"),
-                format!("value:{i}"),
-                None,
-                None,
-                false,
-            )
+            .set(format!("key:{i}"), format!("value:{i}"), None, None, false)
             .await
             .unwrap();
     }

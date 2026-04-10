@@ -27,7 +27,11 @@ pub struct Config {
     pub redis_stream_group: String,
 
     /// Redis stream consumer name (unique per instance)
-    #[arg(long, env = "REDIS_STREAM_CONSUMER", default_value = "bridge_consumer_1")]
+    #[arg(
+        long,
+        env = "REDIS_STREAM_CONSUMER",
+        default_value = "bridge_consumer_1"
+    )]
     pub redis_stream_consumer: String,
 
     /// Base URL of the MCP Gateway API

@@ -2,7 +2,8 @@ use redis_bridge::redis_subscriber::RedisError;
 
 #[test]
 fn test_redis_error_display() {
-    let err = RedisError::ConsumerGroupCreation("BUSYGROUP Consumer Group already exists".to_string());
+    let err =
+        RedisError::ConsumerGroupCreation("BUSYGROUP Consumer Group already exists".to_string());
     assert!(err.to_string().contains("Failed to create consumer group"));
     assert!(err.to_string().contains("BUSYGROUP"));
 

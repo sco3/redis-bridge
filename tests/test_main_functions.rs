@@ -67,11 +67,7 @@ fn test_validate_config_multiple_warnings() {
         Config::try_parse_from(["redis-bridge", "--gateway-url", "http://127.0.0.1:8080"]).unwrap();
 
     let warnings = app::validate_config(&config);
-    assert_eq!(
-        warnings.len(),
-        2,
-        "Expected 2 warnings, got: {warnings:?}"
-    );
+    assert_eq!(warnings.len(), 2, "Expected 2 warnings, got: {warnings:?}");
     assert!(warnings[0].contains("JWT_SECRET_KEY"));
     assert!(warnings[1].contains("localhost") || warnings[1].contains("127.0.0.1"));
 }

@@ -88,19 +88,25 @@ async fn main() {
     let redis_client = connect_redis(&args.config).await;
     let (mut bridge, bridge_output_handle) = spawn_bridge(&args.config).await;
     publish_test_event(&redis_client, &args.config, &tool_name).await;
-    
+
     // Check bridge status before verification
     if let Some(status) = bridge.try_wait().unwrap() {
-        fail(&format!("Bridge exited early with status: {}", status));
+        fail(&format!("Bridge exited early with status: {status}"));
         log("Bridge stdout:");
         if let Some(_output) = bridge_output_handle {
-            // We can't easily read from the handle after spawn, 
+            // We can't easily read from the handle after spawn,
             // but we've set RUST_LOG to show output
         }
         std::process::exit(1);
     }
-    
-    let found = verify_tool_created(&args.config, &tool_name, args.verify_timeout_secs, args.poll_interval_secs).await;
+
+    let found = verify_tool_created(
+        &args.config,
+        &tool_name,
+        args.verify_timeout_secs,
+        args.poll_interval_secs,
+    )
+    .await;
     cleanup_bridge(bridge).await;
     print_summary(found);
 }
@@ -131,7 +137,9 @@ async fn connect_redis(cfg: &Config) -> fred::clients::Client {
     client
 }
 
-async fn spawn_bridge(cfg: &Config) -> (tokio::process::Child, Option<tokio::task::JoinHandle<()>>) {
+async fn spawn_bridge(
+    cfg: &Config,
+) -> (tokio::process::Child, Option<tokio::task::JoinHandle<()>>) {
     log("Launching redis-bridge...");
     let mut bridge = Command::new(
         std::env::current_exe()
@@ -160,11 +168,11 @@ async fn spawn_bridge(cfg: &Config) -> (tokio::process::Child, Option<tokio::tas
         std::process::exit(1);
     });
     log(&format!("Bridge PID: {}", bridge.id().unwrap_or(0)));
-    
+
     // Capture stdout and stderr
     let stdout = bridge.stdout.take();
     let stderr = bridge.stderr.take();
-    
+
     // Spawn tasks to capture output
     let output_handle = if let Some(stdout) = stdout {
         let handle = tokio::spawn(async move {
@@ -177,7 +185,7 @@ async fn spawn_bridge(cfg: &Config) -> (tokio::process::Child, Option<tokio::tas
     } else {
         None
     };
-    
+
     // Also capture stderr
     if let Some(stderr) = stderr {
         tokio::spawn(async move {
@@ -187,7 +195,7 @@ async fn spawn_bridge(cfg: &Config) -> (tokio::process::Child, Option<tokio::tas
             }
         });
     }
-    
+
     tokio::time::sleep(Duration::from_secs(2)).await;
     ok("Bridge is running");
     (bridge, output_handle)
@@ -212,10 +220,10 @@ async fn publish_test_event(client: &fred::clients::Client, cfg: &Config, tool_n
     let _result: String = client
         .xadd(
             &cfg.redis_stream,
-            false,                            // nomkstream
-            None::<()>,                       // no trim strategy
-            "*",                              // autogenerate ID
-            vec![("payload", payload_str)],  // fields as Vec
+            false,                          // nomkstream
+            None::<()>,                     // no trim strategy
+            "*",                            // autogenerate ID
+            vec![("payload", payload_str)], // fields as Vec
         )
         .await
         .unwrap_or_else(|e| {
@@ -226,7 +234,12 @@ async fn publish_test_event(client: &fred::clients::Client, cfg: &Config, tool_n
     tokio::time::sleep(Duration::from_secs(2)).await;
 }
 
-async fn verify_tool_created(cfg: &Config, tool_name: &str, timeout_secs: u64, poll_interval_secs: u64) -> bool {
+async fn verify_tool_created(
+    cfg: &Config,
+    tool_name: &str,
+    timeout_secs: u64,
+    poll_interval_secs: u64,
+) -> bool {
     log(&format!(
         "Polling {}/tools for tool '{}'...",
         cfg.gateway_url, tool_name

@@ -1,7 +1,7 @@
 use clap::Parser;
 use mockito::Server;
-use redis_bridge::app;
 use redis_bridge::api_client::ApiClient;
+use redis_bridge::app;
 use redis_bridge::config::Config;
 
 #[tokio::test]

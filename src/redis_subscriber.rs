@@ -1,7 +1,7 @@
 use fred::prelude::*;
 use fred::types::streams::XReadResponse;
 use thiserror::Error;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::config::Config as AppConfig;
 
@@ -132,16 +132,19 @@ impl RedisSubscriber {
         let last_id = ">";
 
         loop {
-            info!("Waiting for messages on stream '{}' from ID '{}'", self.config.redis_stream, last_id);
+            info!(
+                "Waiting for messages on stream '{}' from ID '{}'",
+                self.config.redis_stream, last_id
+            );
 
             // Block for up to 5 seconds waiting for messages
             let result: Result<XReadResponse<String, String, String, String>, _> = client
                 .xreadgroup_map(
                     &self.config.redis_stream_group,
                     &self.config.redis_stream_consumer,
-                    None,        // count - no limit
-                    Some(5000),  // block for 5 seconds (in milliseconds)
-                    false,       // noack - false means we need to acknowledge
+                    None,       // count - no limit
+                    Some(5000), // block for 5 seconds (in milliseconds)
+                    false,      // noack - false means we need to acknowledge
                     vec![self.config.redis_stream.as_str()],
                     vec![last_id],
                 )
@@ -160,23 +163,17 @@ impl RedisSubscriber {
                             info!("Received message with ID: {}", message_id);
 
                             // Extract the payload from the stream entry
-                            let payload = match fields.get("payload") {
-                                Some(p) => {
-                                    match serde_json::from_str(p) {
-                                        Ok(v) => v,
-                                        Err(e) => {
-                                            warn!(
-                                                "Failed to parse payload as JSON: {}. Raw: {}",
-                                                e, p
-                                            );
-                                            continue;
-                                        }
+                            let payload = if let Some(p) = fields.get("payload") {
+                                match serde_json::from_str(p) {
+                                    Ok(v) => v,
+                                    Err(e) => {
+                                        warn!("Failed to parse payload as JSON: {}. Raw: {}", e, p);
+                                        continue;
                                     }
                                 }
-                                None => {
-                                    warn!("Stream entry has no 'payload' field");
-                                    continue;
-                                }
+                            } else {
+                                warn!("Stream entry has no 'payload' field");
+                                continue;
                             };
 
                             // Process the message
@@ -194,7 +191,10 @@ impl RedisSubscriber {
 
                             match ack_result {
                                 Ok(acked_count) => {
-                                    info!("Acknowledged message {}: {} acknowledged", message_id, acked_count);
+                                    info!(
+                                        "Acknowledged message {}: {} acknowledged",
+                                        message_id, acked_count
+                                    );
                                 }
                                 Err(e) => {
                                     warn!("Failed to acknowledge message {}: {}", message_id, e);

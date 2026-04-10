@@ -2,10 +2,12 @@ use fred::mocks::{MockCommand, Mocks};
 use fred::prelude::*;
 use std::sync::Arc;
 
+type MockFieldPairs = Vec<(String, String)>;
+
 /// Custom mock implementing a realistic stream-notification scenario
 #[derive(Debug)]
 struct StreamNotificationMock {
-    add_buffer: std::sync::Mutex<Vec<(String, Vec<(String, String)>)>>,
+    add_buffer: std::sync::Mutex<Vec<(String, MockFieldPairs)>>,
 }
 
 impl StreamNotificationMock {
@@ -15,7 +17,7 @@ impl StreamNotificationMock {
         }
     }
 
-    fn take_added(&self) -> Vec<(String, Vec<(String, String)>)> {
+    fn take_added(&self) -> Vec<(String, MockFieldPairs)> {
         self.add_buffer.lock().unwrap().drain(..).collect()
     }
 }
@@ -51,10 +53,7 @@ impl Mocks for StreamNotificationMock {
                 pairs.push((fields[i].clone(), fields[i + 1].clone()));
                 i += 2;
             }
-            self.add_buffer
-                .lock()
-                .unwrap()
-                .push((stream, pairs));
+            self.add_buffer.lock().unwrap().push((stream, pairs));
             // Return a fake stream ID
             Ok(Value::from_static_str("1234567890123-0"))
         } else if &*command.cmd == "XGROUP" {
