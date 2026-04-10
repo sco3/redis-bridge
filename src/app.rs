@@ -2,7 +2,7 @@ use crate::api_client::ApiClient;
 use crate::config::Config;
 use crate::redis_subscriber::RedisSubscriber;
 use tokio::signal;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 /// Validate critical production settings, returning warnings.
 pub fn validate_config(config: &Config) -> Vec<String> {
