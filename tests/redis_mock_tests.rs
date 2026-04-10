@@ -118,14 +118,8 @@ async fn test_mock_json_message() {
 struct ErrorMock;
 
 impl Mocks for ErrorMock {
-    fn process_command(
-        &self,
-        _command: MockCommand,
-    ) -> Result<Value, Error> {
-        Err(Error::new(
-            ErrorKind::NotFound,
-            "ERR no such key",
-        ))
+    fn process_command(&self, _command: MockCommand) -> Result<Value, Error> {
+        Err(Error::new(ErrorKind::NotFound, "ERR no such key"))
     }
 }
 
@@ -136,7 +130,7 @@ async fn test_mock_error_handling() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     let result: Result<String, _> = client.get("missing_key").await;
@@ -152,7 +146,7 @@ async fn test_mock_list_operations() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     let _: String = client.lpush("tasks", "task1").await.unwrap();
@@ -175,7 +169,7 @@ async fn test_mock_set_operations() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     let _: String = client.sadd("tags", "rust").await.unwrap();
@@ -198,7 +192,7 @@ async fn test_mock_expiration() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     let _: () = client
@@ -266,7 +260,7 @@ async fn test_mock_tool_notification_scenario() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     // Simulate a realistic tool notification payload
@@ -321,7 +315,7 @@ async fn test_echo_mock_returns_args() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     let result: Vec<Value> = client.set("foo", "bar", None, None, false).await.unwrap();
@@ -340,7 +334,7 @@ async fn test_buffer_clear() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     let _: String = client.set("foo", "bar", None, None, false).await.unwrap();
@@ -358,7 +352,7 @@ async fn test_pipeline_with_echo() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     let pipeline = client.pipeline();
@@ -378,7 +372,7 @@ async fn test_subscribe_recorded() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     client.subscribe("test_channel").await.unwrap();
@@ -397,7 +391,7 @@ async fn test_simple_map_multiple_values() {
         ..Default::default()
     };
     let client = Builder::from_config(config).build().unwrap();
-    
+
     client.init().await.unwrap();
 
     // Set multiple keys

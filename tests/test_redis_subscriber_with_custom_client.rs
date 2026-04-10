@@ -60,11 +60,8 @@ async fn test_redis_subscriber_with_custom_client() {
 
     // Run with timeout — the mock doesn't stream messages,
     // so we expect a timeout
-    let result = tokio::time::timeout(
-        Duration::from_millis(500),
-        subscriber.run(|_| async {}),
-    )
-    .await;
+    let result =
+        tokio::time::timeout(Duration::from_millis(500), subscriber.run(|_| async {})).await;
 
     // Timeout is expected (no messages delivered through stream in mock mode)
     assert!(result.is_err());

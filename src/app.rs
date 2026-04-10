@@ -9,16 +9,14 @@ pub fn validate_config(config: &Config) -> Vec<String> {
     let mut warnings = Vec::new();
     if std::env::var("JWT_SECRET_KEY").is_err() {
         warnings.push(
-            "JWT_SECRET_KEY is not set. Using test default — DO NOT use in production!"
-                .to_string(),
+            "JWT_SECRET_KEY is not set. Using test default — DO NOT use in production!".to_string(),
         );
     }
     if config.gateway_url.starts_with("http://localhost")
         || config.gateway_url.starts_with("http://127.0.0.1")
     {
-        warnings.push(
-            "Gateway URL points to localhost. This may not work in production.".to_string(),
-        );
+        warnings
+            .push("Gateway URL points to localhost. This may not work in production.".to_string());
     }
     warnings
 }

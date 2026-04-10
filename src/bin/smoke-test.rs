@@ -158,9 +158,7 @@ async fn main() {
             fail(&format!("Failed to publish to Redis: {}", e));
             std::process::exit(1);
         });
-    ok(&format!(
-        "Published event (payload sent)",
-    ));
+    ok(&format!("Published event (payload sent)",));
 
     // Give the bridge time to process
     tokio::time::sleep(Duration::from_secs(2)).await;

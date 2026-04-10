@@ -27,20 +27,14 @@ impl Mocks for ToolNotificationMock {
                 Some(Value::String(s)) => s.to_string(),
                 Some(Value::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
                 _ => {
-                    return Err(Error::new(
-                        ErrorKind::InvalidArgument,
-                        "Invalid channel",
-                    ));
+                    return Err(Error::new(ErrorKind::InvalidArgument, "Invalid channel"));
                 }
             };
             let message = match command.args.get(1) {
                 Some(Value::String(s)) => s.to_string(),
                 Some(Value::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
                 _ => {
-                    return Err(Error::new(
-                        ErrorKind::InvalidArgument,
-                        "Invalid message",
-                    ));
+                    return Err(Error::new(ErrorKind::InvalidArgument, "Invalid message"));
                 }
             };
             self.publish_buffer.lock().unwrap().push((channel, message));
@@ -48,10 +42,7 @@ impl Mocks for ToolNotificationMock {
         } else if &*command.cmd == "SUBSCRIBE" {
             Ok(Value::Queued)
         } else {
-            Err(Error::new(
-                ErrorKind::Unknown,
-                "Unimplemented.",
-            ))
+            Err(Error::new(ErrorKind::Unknown, "Unimplemented."))
         }
     }
 }

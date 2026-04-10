@@ -39,11 +39,9 @@ async fn test_redis_subscriber_receives_published_message() {
     let client = Builder::from_config(redis_cfg).build().unwrap();
     client.init().await.unwrap();
 
-    let app_cfg = AppConfig::try_parse_from([
-        "redis-bridge",
-        "--redis-channel", "smoke_test_channel",
-    ])
-    .unwrap();
+    let app_cfg =
+        AppConfig::try_parse_from(["redis-bridge", "--redis-channel", "smoke_test_channel"])
+            .unwrap();
 
     let subscriber = RedisSubscriber::with_client(app_cfg, client.clone());
 
