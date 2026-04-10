@@ -5,6 +5,7 @@ use redis_bridge::api_client::ApiClient;
 use redis_bridge::config::Config;
 use redis_bridge::schemas::ToolCreate;
 use serde_json::json;
+use std::collections::HashMap;
 
 /// Test successful tool creation via API
 #[tokio::test]
@@ -43,7 +44,7 @@ async fn test_create_tool_success() {
 
     let result = client.create_tool(&tool).await;
     if let Err(ref e) = result {
-        eprintln!("Error: {:?}", e);
+        eprintln!("Error: {e:?}");
     }
     assert!(result.is_ok());
     let body = result.unwrap();
@@ -80,7 +81,6 @@ async fn test_create_tool_with_auth() {
 
     let client = ApiClient::new(config).unwrap();
 
-    use std::collections::HashMap;
     let mut headers = HashMap::new();
     headers.insert("X-API-Key".to_string(), "secret".to_string());
 
@@ -281,7 +281,7 @@ async fn test_create_tool_with_bearer_token() {
     mock.assert_async().await;
 }
 
-/// Test create_tool_from_json with valid JSON
+/// Test `create_tool_from_json` with valid JSON
 #[tokio::test]
 async fn test_create_tool_from_json() {
     let mut server = Server::new_async().await;
@@ -323,7 +323,7 @@ async fn test_create_tool_from_json() {
     mock.assert_async().await;
 }
 
-/// Test create_tool_from_json with invalid JSON
+/// Test `create_tool_from_json` with invalid JSON
 #[tokio::test]
 async fn test_create_tool_from_json_invalid() {
     let config = Config::try_parse_from([
@@ -497,9 +497,9 @@ async fn test_create_multiple_tools() {
 
     for i in 1..=3 {
         let tool = ToolCreate {
-            name: format!("tool-{}", i),
-            url: Some(format!("http://example.com/api/{}", i)),
-            description: Some(format!("Tool number {}", i)),
+            name: format!("tool-{i}"),
+            url: Some(format!("http://example.com/api/{i}")),
+            description: Some(format!("Tool number {i}")),
             integration_type: "REST".to_string(),
             request_type: "POST".to_string(),
             ..Default::default()
@@ -507,7 +507,7 @@ async fn test_create_multiple_tools() {
 
         let result = client.create_tool(&tool).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap()["id"], format!("tool-{}", i));
+        assert_eq!(result.unwrap()["id"], format!("tool-{i}"));
     }
 
     mock1.assert_async().await;

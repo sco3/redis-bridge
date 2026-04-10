@@ -71,7 +71,7 @@ impl Default for JwtConfig {
 }
 
 /// Read JWT secret from env, falling back to a known test key.
-/// In production, the caller MUST validate that JWT_SECRET_KEY is set
+/// In production, the caller MUST validate that `JWT_SECRET_KEY` is set
 /// (see `main.rs` validation).
 fn jwt_secret_from_env() -> String {
     std::env::var("JWT_SECRET_KEY")

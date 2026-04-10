@@ -17,7 +17,7 @@ impl Mocks for SimpleOkMock {
     }
 }
 
-/// Test that the subscriber handles the run() path with a pre-built client.
+/// Test that the subscriber handles the `run()` path with a pre-built client.
 /// This covers the `Some(client)` branch in `run()`.
 #[tokio::test]
 async fn test_run_with_prebuilt_client() {

@@ -64,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
                     break;
                 }
             }
-            _ = app::shutdown_signal() => {
+            () = app::shutdown_signal() => {
                 info!("Shutdown requested, exiting.");
                 break;
             }

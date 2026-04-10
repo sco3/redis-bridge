@@ -86,15 +86,15 @@ fn main() {
     };
 
     let token = jwt::generate_jwt_token(&jwt_config).unwrap_or_else(|e| {
-        eprintln!("Error generating token: {}", e);
+        eprintln!("Error generating token: {e}");
         std::process::exit(1);
     });
 
     if args.raw {
-        println!("{}", token);
+        println!("{token}");
     } else {
         println!("JWT Token:");
-        println!("  {}", token);
+        println!("  {token}");
         println!();
         println!("Configuration:");
         println!("  Secret:      {}", mask_secret(&jwt_config.secret));
@@ -107,8 +107,7 @@ fn main() {
         println!();
         println!("Use with:");
         println!(
-            "  curl -H \"Authorization: Bearer {}\" http://localhost:8080/tools",
-            token
+            "  curl -H \"Authorization: Bearer {token}\" http://localhost:8080/tools"
         );
     }
 }

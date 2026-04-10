@@ -69,6 +69,7 @@ fn fail(msg: &str) {
 }
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() {
     let args = Args::parse();
     let cfg = &args.config;
@@ -81,7 +82,7 @@ async fn main() {
             .to_string()
     });
 
-    let tool_name = format!("smoke-test-tool-{}", tool_suffix);
+    let tool_name = format!("smoke-test-tool-{tool_suffix}");
 
     println!();
     log("═══════════════════════════════════════════");
@@ -96,11 +97,11 @@ async fn main() {
         std::process::exit(1);
     });
     let redis_client = Builder::from_config(redis_cfg).build().unwrap_or_else(|e| {
-        fail(&format!("Failed to build Redis client: {}", e));
+        fail(&format!("Failed to build Redis client: {e}"));
         std::process::exit(1);
     });
     redis_client.init().await.unwrap_or_else(|e| {
-        fail(&format!("Failed to connect to Redis: {}", e));
+        fail(&format!("Failed to connect to Redis: {e}"));
         std::process::exit(1);
     });
     ok(&format!("Redis ready at {}", cfg.redis_url));
@@ -126,7 +127,7 @@ async fn main() {
     .kill_on_drop(true)
     .spawn()
     .unwrap_or_else(|e| {
-        fail(&format!("Failed to spawn redis-bridge: {}", e));
+        fail(&format!("Failed to spawn redis-bridge: {e}"));
         std::process::exit(1);
     });
     log(&format!("Bridge PID: {}", bridge.id().unwrap_or(0)));
@@ -155,10 +156,10 @@ async fn main() {
         .publish(&cfg.redis_channel, payload_str.clone())
         .await
         .unwrap_or_else(|e| {
-            fail(&format!("Failed to publish to Redis: {}", e));
+            fail(&format!("Failed to publish to Redis: {e}"));
             std::process::exit(1);
         });
-    ok(&"Published event (payload sent)".to_string());
+    ok("Published event (payload sent)");
 
     // Give the bridge time to process
     tokio::time::sleep(Duration::from_secs(2)).await;
@@ -191,7 +192,7 @@ async fn main() {
     while Instant::now() < deadline {
         let resp = client
             .get(format!("{}/tools", cfg.gateway_url.trim_end_matches('/')))
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", format!("Bearer {token}"))
             .send()
             .await;
 

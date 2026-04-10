@@ -25,8 +25,7 @@ fn test_validate_config_no_warnings_with_jwt() {
     let warnings = app::validate_config(&config);
     assert!(
         warnings.is_empty(),
-        "Expected no warnings, got: {:?}",
-        warnings
+        "Expected no warnings, got: {warnings:?}"
     );
 
     unset_env("JWT_SECRET_KEY");
@@ -54,7 +53,7 @@ fn test_validate_config_warns_on_localhost_gateway() {
         Config::try_parse_from(["redis-bridge", "--gateway-url", "http://localhost:8080"]).unwrap();
 
     let warnings = app::validate_config(&config);
-    assert_eq!(warnings.len(), 1, "Expected 1 warning, got: {:?}", warnings);
+    assert_eq!(warnings.len(), 1, "Expected 1 warning, got: {warnings:?}");
     assert!(warnings[0].contains("localhost"));
 
     unset_env("JWT_SECRET_KEY");
@@ -71,8 +70,7 @@ fn test_validate_config_multiple_warnings() {
     assert_eq!(
         warnings.len(),
         2,
-        "Expected 2 warnings, got: {:?}",
-        warnings
+        "Expected 2 warnings, got: {warnings:?}"
     );
     assert!(warnings[0].contains("JWT_SECRET_KEY"));
     assert!(warnings[1].contains("localhost") || warnings[1].contains("127.0.0.1"));

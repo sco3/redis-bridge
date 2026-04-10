@@ -5,6 +5,7 @@ use tokio::signal;
 use tracing::{error, info};
 
 /// Validate critical production settings, returning warnings.
+#[must_use]
 pub fn validate_config(config: &Config) -> Vec<String> {
     let mut warnings = Vec::new();
     if std::env::var("JWT_SECRET_KEY").is_err() {
@@ -31,6 +32,10 @@ pub fn log_startup(config: &Config) {
 }
 
 /// Create the application components from configuration.
+///
+/// # Errors
+///
+/// Returns an error if the API client fails to initialize.
 pub fn create_app(config: &Config) -> anyhow::Result<(ApiClient, RedisSubscriber)> {
     let api_client = ApiClient::new(config.clone())?;
     let subscriber = RedisSubscriber::new(config.clone());
@@ -38,6 +43,10 @@ pub fn create_app(config: &Config) -> anyhow::Result<(ApiClient, RedisSubscriber
 }
 
 /// Build a shutdown signal future that resolves on Ctrl+C or SIGTERM.
+///
+/// # Panics
+///
+/// Panics if the OS signal handlers cannot be installed.
 pub async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
@@ -57,14 +66,15 @@ pub async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => info!("Received Ctrl+C, shutting down gracefully..."),
-        _ = terminate => info!("Received SIGTERM, shutting down gracefully..."),
+        () = ctrl_c => info!("Received Ctrl+C, shutting down gracefully..."),
+        () = terminate => info!("Received SIGTERM, shutting down gracefully..."),
     }
 }
 
 /// Calculate exponential backoff with a 60-second cap.
+#[must_use]
 pub fn calculate_backoff(attempt: u32) -> u64 {
-    std::cmp::min(5 * 2u32.pow(attempt.min(4)), 60) as u64
+    u64::from(std::cmp::min(5 * 2u32.pow(attempt.min(4)), 60))
 }
 
 /// Handle a single notification by creating a tool via the API.

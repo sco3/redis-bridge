@@ -60,15 +60,14 @@ impl RedisSubscriber {
         F: FnMut(serde_json::Value) -> T + Send + Sync + 'static,
         T: std::future::Future<Output = ()> + Send,
     {
-        match &self.client {
-            Some(client) => self.run_loop(client, handler).await,
-            None => {
-                info!("Connecting to Redis at {}", self.config.redis_url);
-                let redis_config = fred::types::config::Config::from_url(&self.config.redis_url)?;
-                let client = Builder::from_config(redis_config).build()?;
-                client.init().await?;
-                self.run_loop(&client, handler).await
-            }
+        if let Some(client) = &self.client {
+            self.run_loop(client, handler).await
+        } else {
+            info!("Connecting to Redis at {}", self.config.redis_url);
+            let redis_config = fred::types::config::Config::from_url(&self.config.redis_url)?;
+            let client = Builder::from_config(redis_config).build()?;
+            client.init().await?;
+            self.run_loop(&client, handler).await
         }
     }
 

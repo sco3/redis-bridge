@@ -3,7 +3,7 @@ use fred::mocks::{Buffer, Echo, MockCommand, Mocks, SimpleMap};
 use fred::prelude::*;
 use std::sync::Arc;
 
-/// Test basic string operations with SimpleMap mock
+/// Test basic string operations with `SimpleMap` mock
 #[tokio::test]
 async fn test_mock_string_operations() {
     let simple_map = Arc::new(SimpleMap::new());
@@ -382,7 +382,7 @@ async fn test_subscribe_recorded() {
     assert_eq!(commands[0].cmd, "SUBSCRIBE");
 }
 
-/// Test SimpleMap stores and retrieves multiple values
+/// Test `SimpleMap` stores and retrieves multiple values
 #[tokio::test]
 async fn test_simple_map_multiple_values() {
     let simple_map = Arc::new(SimpleMap::new());
@@ -398,8 +398,8 @@ async fn test_simple_map_multiple_values() {
     for i in 0..10 {
         let _: () = client
             .set(
-                format!("key:{}", i),
-                format!("value:{}", i),
+                format!("key:{i}"),
+                format!("value:{i}"),
                 None,
                 None,
                 false,
@@ -410,7 +410,7 @@ async fn test_simple_map_multiple_values() {
 
     // Retrieve and verify all
     for i in 0..10 {
-        let val: String = client.get(format!("key:{}", i)).await.unwrap();
-        assert_eq!(val, format!("value:{}", i));
+        let val: String = client.get(format!("key:{i}")).await.unwrap();
+        assert_eq!(val, format!("value:{i}"));
     }
 }

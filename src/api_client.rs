@@ -39,6 +39,13 @@ impl ApiClient {
         Ok(Self { client, config })
     }
 
+    /// Get an authentication token for API requests.
+    ///
+    /// Returns a pre-defined bearer token if configured, otherwise generates a JWT.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if JWT generation fails.
     pub fn get_auth_token(&self) -> Result<String, ApiError> {
         if self.config.use_predefined_token {
             if let Some(token) = &self.config.bearer_token {
