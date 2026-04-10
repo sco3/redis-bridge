@@ -28,8 +28,8 @@ All parameters can be set via CLI arguments or environment variables:
 |-------------|---------------------|---------|-------------|
 | `--redis-url` | `REDIS_URL` | `redis://127.0.0.1:6379` | Redis connection URL |
 | `--redis-stream` | `REDIS_STREAM` | `tool_notifications_stream` | Redis stream key to read from |
-| `--redis-stream-group` | `REDIS_STREAM_GROUP` | `bridge_consumers` | Consumer group name |
-| `--redis-stream-consumer` | `REDIS_STREAM_CONSUMER` | `bridge_consumer_1` | Consumer name (should be unique per instance) |
+| `--redis-stream-group` | `REDIS_GROUP` | `bridge_consumers` | Consumer group name |
+| `--redis-stream-consumer` | `REDIS_CONSUMER` | `bridge_consumer_1` | Consumer name (should be unique per instance) |
 | `--gateway-url` | `GATEWAY_URL` | `http://localhost:8080` | MCP Gateway base URL |
 | `--tool-endpoint` | `TOOL_ENDPOINT` | `/tools` | Tool creation endpoint path |
 | `--jwt-secret` | `JWT_SECRET_KEY` | `my-test-key-but-now-longer-than-32-bytes` | JWT signing secret |
@@ -203,6 +203,39 @@ The generated JWT tokens follow this structure (matching mcp-benchmark):
 ```bash
 # Run unit tests
 cargo test
+
+# Run linting (clippy with pedantic lints)
+just lint
+
+# Run end-to-end smoke test (requires running Redis + MCP Gateway)
+cargo run --bin smoke-test
+
+# Run smoke test with custom configuration
+REDIS_URL=redis://my-redis:6379 GATEWAY_URL=http://myhost:8080 cargo run --bin smoke-test
+```
+
+## Development
+
+This project uses [Just](https://just.systems/) for common development tasks:
+
+```bash
+# List available targets
+just
+
+# Build in release mode
+just build
+
+# Run tests
+just test
+
+# Run linter (clippy)
+just lint
+
+# Format code
+just fmt
+
+# Full CI-style check (fmt, check, clippy, test)
+just ci
 ```
 
 ## License

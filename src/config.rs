@@ -23,13 +23,13 @@ pub struct Config {
     pub redis_stream: String,
 
     /// Redis stream consumer group name
-    #[arg(long, env = "REDIS_STREAM_GROUP", default_value = "bridge_consumers")]
+    #[arg(long, env = "REDIS_GROUP", default_value = "bridge_consumers")]
     pub redis_stream_group: String,
 
     /// Redis stream consumer name (unique per instance)
     #[arg(
         long,
-        env = "REDIS_STREAM_CONSUMER",
+        env = "REDIS_CONSUMER",
         default_value = "bridge_consumer_1"
     )]
     pub redis_stream_consumer: String,
