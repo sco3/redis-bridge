@@ -69,7 +69,7 @@ fn test_validate_config_multiple_warnings() {
     unset_env("JWT_SECRET_KEY");
     let config = Config::try_parse_from([
         "redis-bridge",
-        "--gateway-url", "http://127.0.0.1:4444",
+        "--gateway-url", "http://127.0.0.1:8080",
     ])
     .unwrap();
 

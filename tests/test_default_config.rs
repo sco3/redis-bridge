@@ -6,7 +6,7 @@ fn test_default_config() {
     let config = Config::try_parse_from(["redis-bridge"]).unwrap();
     assert_eq!(config.redis_url, "redis://127.0.0.1:6379");
     assert_eq!(config.redis_channel, "tool_notifications");
-    assert_eq!(config.gateway_url, "http://localhost:4444");
+    assert_eq!(config.gateway_url, "http://localhost:8080");
     assert_eq!(config.tool_endpoint, "/tools");
     assert_eq!(
         config.jwt_secret,

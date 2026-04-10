@@ -28,7 +28,7 @@ pub struct Config {
         short,
         long,
         env = "GATEWAY_URL",
-        default_value = "http://localhost:4444"
+        default_value = "http://localhost:8080"
     )]
     pub gateway_url: String,
 

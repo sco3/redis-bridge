@@ -329,7 +329,7 @@ async fn test_create_tool_from_json_invalid() {
     let config = Config::try_parse_from([
         "redis-bridge",
         "--gateway-url",
-        "http://localhost:4444",
+        "http://localhost:8080",
         "--jwt-secret",
         "test-secret-key-that-is-long-enough",
         "--jwt-username",
