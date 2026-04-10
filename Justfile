@@ -25,14 +25,12 @@ test:
 install-coverage:
     cargo install cargo-llvm-cov
 
-# Run tests with LLVM coverage report (text summary), excludes bin/ utilities
+# Show coverage text summary (excludes bin/ utilities)
 coverage: install-coverage
-    cargo llvm-cov --all-targets --all-features --ignore-filename-regex "src/bin/.*" --lcov --output-path lcov.info
-    cargo llvm-cov report --html --ignore-filename-regex "src/bin/.*"
-
-# Run tests with coverage, show text summary, generate HTML report, and print the path
-coverage-html: install-coverage
     cargo llvm-cov --all-targets --all-features --ignore-filename-regex "src/bin/.*" --summary-only
+
+# Generate HTML coverage report and print the URL
+coverage-html: install-coverage
     cargo llvm-cov --all-targets --all-features --ignore-filename-regex "src/bin/.*" --html
     @echo ""
     @echo "📊 Coverage report generated (src/bin/ excluded):"
