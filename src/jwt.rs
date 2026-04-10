@@ -1,7 +1,7 @@
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::Utc;
-use hmac::{Hmac, Mac};
-use rand::Rng;
+use hmac::{Hmac, KeyInit, Mac};
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use thiserror::Error;
@@ -97,8 +97,8 @@ pub fn generate_jwt_token(config: &JwtConfig) -> Result<String, JwtError> {
         typ: "JWT".to_string(),
     };
 
-    let jti: String = rand::thread_rng()
-        .sample_iter(&rand::distributions::Alphanumeric)
+    let jti: String = rand::rng()
+        .sample_iter(&rand::distr::Alphanumeric)
         .take(16)
         .map(char::from)
         .collect();
