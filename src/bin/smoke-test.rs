@@ -85,18 +85,9 @@ async fn main() {
 
     print_banner();
 
-    let overall_start = Instant::now();
-
-    let (redis_client, redis_duration) = timed(connect_redis(&args.config)).await;
-    log(&format!("⏱  Redis connection: {:?}", redis_duration));
-
-    let (mut bridge, bridge_output_handle, bridge_spawn_duration) =
-        timed(spawn_bridge(&args.config)).await;
-    log(&format!("⏱  Bridge spawn + wait: {:?}", bridge_spawn_duration));
-
-    let (_publish_event, publish_duration) =
-        timed(publish_test_event(&redis_client, &args.config, &tool_name)).await;
-    log(&format!("⏱  Publish event: {:?}", publish_duration));
+    let redis_client = connect_redis(&args.config).await;
+    let (mut bridge, bridge_output_handle) = spawn_bridge(&args.config).await;
+    publish_test_event(&redis_client, &args.config, &tool_name).await;
 
     // Check bridge status before verification
     if let Some(status) = bridge.try_wait().unwrap() {
@@ -109,28 +100,15 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let (found, verify_duration) = timed(verify_tool_created(
+    let found = verify_tool_created(
         &args.config,
         &tool_name,
         args.verify_timeout_secs,
         args.poll_interval_secs,
-    ))
+    )
     .await;
-    log(&format!("⏱  Verify tool: {:?}", verify_duration));
-
-    let (_cleanup, cleanup_duration) = timed(cleanup_bridge(bridge)).await;
-    log(&format!("⏱  Cleanup bridge: {:?}", cleanup_duration));
-
-    let overall_duration = overall_start.elapsed();
-    log(&format!("⏱  Total: {:?}", overall_duration));
-
+    cleanup_bridge(bridge).await;
     print_summary(found);
-}
-
-async fn timed<T, F: std::future::Future<Output = T>>(fut: F) -> (T, Duration) {
-    let start = Instant::now();
-    let result = fut.await;
-    (result, start.elapsed())
 }
 
 fn print_banner() {
@@ -161,7 +139,7 @@ async fn connect_redis(cfg: &Config) -> fred::clients::Client {
 
 async fn spawn_bridge(
     cfg: &Config,
-) -> (tokio::process::Child, Option<tokio::task::JoinHandle<()>>, Duration) {
+) -> (tokio::process::Child, Option<tokio::task::JoinHandle<()>>) {
     log("Launching redis-bridge...");
     let mut bridge = Command::new(
         std::env::current_exe()
