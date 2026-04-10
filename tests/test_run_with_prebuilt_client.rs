@@ -34,7 +34,7 @@ async fn test_run_with_prebuilt_client() {
 
     // Verify the subscriber uses the pre-built client path
     assert_eq!(subscriber.redis_url(), "redis://127.0.0.1:6379");
-    assert_eq!(subscriber.redis_stream(), "tool_notifications_stream");
+    assert_eq!(subscriber.redis_stream(), "policy-binding-events");
 
     // Run will timeout since mock doesn't stream messages
     let _ = tokio::time::timeout(

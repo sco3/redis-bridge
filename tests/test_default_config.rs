@@ -5,9 +5,9 @@ use redis_bridge::config::Config;
 fn test_default_config() {
     let config = Config::try_parse_from(["redis-bridge"]).unwrap();
     assert_eq!(config.redis_url, "redis://127.0.0.1:6379");
-    assert_eq!(config.redis_stream, "tool_notifications_stream");
-    assert_eq!(config.redis_stream_group, "bridge_consumers");
-    assert_eq!(config.redis_stream_consumer, "bridge_consumer_1");
+    assert_eq!(config.redis_stream, "policy-binding-events");
+    assert_eq!(config.redis_stream_group, "policy-workers");
+    assert_eq!(config.redis_stream_consumer, "listener-service-1");
     assert_eq!(config.gateway_url, "http://localhost:8080");
     assert_eq!(config.tool_endpoint, "/tools");
     assert_eq!(

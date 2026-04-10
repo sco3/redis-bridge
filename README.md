@@ -27,9 +27,9 @@ All parameters can be set via CLI arguments or environment variables:
 | CLI Argument | Environment Variable | Default | Description |
 |-------------|---------------------|---------|-------------|
 | `--redis-url` | `REDIS_URL` | `redis://127.0.0.1:6379` | Redis connection URL |
-| `--redis-stream` | `REDIS_STREAM` | `tool_notifications_stream` | Redis stream key to read from |
-| `--redis-stream-group` | `REDIS_GROUP` | `bridge_consumers` | Consumer group name |
-| `--redis-stream-consumer` | `REDIS_CONSUMER` | `bridge_consumer_1` | Consumer name (should be unique per instance) |
+| `--redis-stream` | `REDIS_STREAM` | `policy-binding-events` | Redis stream key to read from |
+| `--redis-stream-group` | `REDIS_GROUP` | `policy-workers` | Consumer group name |
+| `--redis-stream-consumer` | `REDIS_CONSUMER` | `listener-service-1` | Consumer name (should be unique per instance) |
 | `--gateway-url` | `GATEWAY_URL` | `http://localhost:8080` | MCP Gateway base URL |
 | `--tool-endpoint` | `TOOL_ENDPOINT` | `/tools` | Tool creation endpoint path |
 | `--jwt-secret` | `JWT_SECRET_KEY` | `my-test-key-but-now-longer-than-32-bytes` | JWT signing secret |
