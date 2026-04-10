@@ -25,15 +25,15 @@ test:
 install-coverage:
     cargo install cargo-llvm-cov
 
-# Show coverage text summary (excludes bin/ utilities)
+# Show coverage text summary (excludes bin/ and main.rs)
 coverage: install-coverage
-    cargo llvm-cov --all-targets --all-features --ignore-filename-regex "src/bin/.*" --summary-only
+    cargo llvm-cov --all-targets --all-features --ignore-filename-regex "(src/bin/.*|src/main\.rs)" --summary-only
 
 # Generate HTML coverage report and print the URL
 coverage-html: install-coverage
-    cargo llvm-cov --all-targets --all-features --ignore-filename-regex "src/bin/.*" --html
+    cargo llvm-cov --all-targets --all-features --ignore-filename-regex "(src/bin/.*|src/main\.rs)" --html
     @echo ""
-    @echo "📊 Coverage report generated (src/bin/ excluded):"
+    @echo "📊 Coverage report generated (src/bin/ and src/main.rs excluded):"
     @echo "   file://$(pwd)/target/llvm-cov/html/index.html"
 
 # Clean build artifacts
