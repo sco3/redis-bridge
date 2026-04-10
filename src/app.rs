@@ -46,7 +46,8 @@ pub fn create_app(config: &Config) -> anyhow::Result<(ApiClient, RedisSubscriber
 ///
 /// # Panics
 ///
-/// Panics if the OS signal handlers cannot be installed.
+/// Panics if the Ctrl+C signal handler cannot be installed.
+/// On Unix, also panics if the SIGTERM handler cannot be installed.
 pub async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
